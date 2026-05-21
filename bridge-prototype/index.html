@@ -1,0 +1,2335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚓ Bridge — Command Your Fleet</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    /* ── MONOKAI PRO PALETTE ── */
+    /* Backgrounds — warm charcoal */
+    --ocean-abyss: #1a1d21;
+    --ocean-deep: #2C3238;
+    --ocean-mid: #353b42;
+    --ocean-surface: #3f454c;
+    --bridge-panel: #272c31;
+    --bridge-panel-raised: #2d3338;
+    --bridge-border: rgba(255, 255, 255, 0.08);
+    --bridge-border-bright: rgba(255, 255, 255, 0.15);
+
+    /* Accents — Monokai Pro vibrant spectrum */
+    --bridge-glow: #78DDE8;
+    --bridge-glow-dim: rgba(120, 221, 232, 0.12);
+    --bridge-glow-strong: rgba(120, 221, 232, 0.28);
+
+    /* Text — warm ivory on charcoal */
+    --foam: #F2FFFC;
+    --foam-muted: #9CA3AF;
+    --deck: #1f2327;
+
+    /* Semantic colors — Monokai Pro mapped */
+    --brass: #FFD739;
+    --brass-dim: #c49a1a;
+    --sea-green: #A9DD76;
+    --sea-green-dim: rgba(169, 221, 118, 0.15);
+    --alert-red: #FF654A;
+    --alert-amber: #FFD739;
+    --cargo-blue: #41B0E0;
+    --crew-purple: #DA70D6;
+    --radar-green: #7FDAAE;
+
+    /* Text hierarchy */
+    --text-primary: #F2FFFC;
+    --text-secondary: #B3B9C0;
+    --text-dim: #727280;
+    --text-faint: #545860;
+
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Inter', -apple-system, sans-serif;
+
+    --radius-sm: 5px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
+
+    --glow-sm: 0 0 12px rgba(120, 221, 232, 0.10);
+    --glow-md: 0 0 24px rgba(120, 221, 232, 0.18);
+    --shadow-card: 0 2px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.03);
+    --shadow-elevated: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+    --transition-fast: 0.18s cubic-bezier(.4,0,.2,1);
+    --transition-smooth: 0.3s cubic-bezier(.4,0,.2,1);
+    --transition-spring: 0.5s cubic-bezier(.175,.885,.32,1.275);
+
+    /* Glass effect */
+    --glass-bg: rgba(39, 44, 49, 0.75);
+    --glass-border: rgba(120, 221, 232, 0.08);
+    --glass-blur: blur(20px);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--ocean-abyss);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Ambient background effect ── */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(120, 221, 232, 0.035) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(218, 112, 214, 0.025) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(169, 221, 118, 0.02) 0%, transparent 60%);
+    animation: ambient-drift 30s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes ambient-drift {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(-2%, -2%) rotate(1deg); }
+  }
+
+  /* ═══ Title Bar ═══ */
+  .title-bar {
+    height: 38px;
+    background: linear-gradient(180deg, var(--deck) 0%, rgba(6,12,23,0.95) 100%);
+    border-bottom: 1px solid var(--bridge-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    position: relative;
+    z-index: 200;
+    backdrop-filter: blur(10px);
+    -webkit-app-region: drag;
+  }
+  .title-bar::after {
+    content: '';
+    position: absolute; bottom: -1px; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--bridge-glow-dim), transparent);
+    opacity: 0.5;
+  }
+  .title-bar-left { display: flex; align-items: center; gap: 10px; }
+  .anchor-icon {
+    width: 22px; height: 22px;
+    background: linear-gradient(135deg, var(--bridge-glow), #0284c7);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+  }
+  .app-name {
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--foam) 30%, var(--bridge-glow));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .title-bar-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    letter-spacing: 0.3px;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--radar-green);
+    box-shadow: 0 0 8px var(--radar-green), 0 0 16px rgba(74, 222, 128, 0.3);
+    animation: pulse-glow 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 8px var(--radar-green), 0 0 16px rgba(74,222,128,0.3); opacity: 1; }
+    50% { box-shadow: 0 0 4px var(--radar-green), 0 0 8px rgba(74,222,128,0.15); opacity: 0.7; }
+  }
+  .title-bar-right { display: flex; align-items: center; gap: 2px; -webkit-app-region: no-drag; }
+  .title-btn {
+    width: 30px; height: 30px;
+    border: none; background: transparent;
+    color: var(--text-dim); cursor: pointer;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all var(--transition-fast);
+    position: relative;
+  }
+  .title-btn:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--foam);
+    transform: translateY(-1px);
+  }
+  .title-btn::after {
+    content: '';
+    position: absolute; inset: 4px;
+    border-radius: 3px;
+    transition: background var(--transition-fast);
+  }
+
+  /* ═══ Main Layout ═══ */
+  .bridge-wrapper {
+    position: relative;
+    z-index: 1;
+    height: calc(100vh - 38px - 48px);
+    display: flex;
+    flex-direction: column;
+  }
+  .bridge-layout {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr 360px;
+    grid-template-rows: 1fr 170px;
+    gap: 1px;
+    background: var(--bridge-border);
+    padding: 1px;
+    overflow: hidden;
+  }
+
+  /* ═══ Panel Base ═══ */
+  .panel {
+    background: var(--bridge-panel);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  /* Subtle inner glow on panels */
+  .panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(56,189,248,0.06), transparent);
+    pointer-events: none;
+  }
+  .panel-header {
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid var(--bridge-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.015) 0%, transparent 100%);
+  }
+  .panel-title {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .panel-title .icon { font-size: 13px; filter: grayscale(0.3); }
+  .panel-actions { display: flex; gap: 3px; }
+  .panel-action-btn {
+    width: 26px; height: 26px;
+    border: none; background: transparent;
+    color: var(--text-faint); cursor: pointer;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; transition: all var(--transition-fast);
+  }
+  .panel-action-btn:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-secondary);
+  }
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .panel-body::-webkit-scrollbar { width: 5px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb {
+    background: var(--bridge-border);
+    border-radius: 3px;
+    transition: background var(--transition-fast);
+  }
+  .panel-body::-webkit-scrollbar-thumb:hover { background: var(--bridge-border-bright); }
+
+  /* ═══ Fleet Panel ═══ */
+  .fleet-panel { grid-row: 1 / 3; }
+  .fleet-search { margin: 10px 12px 8px; position: relative; }
+  .fleet-search input {
+    width: 100%;
+    padding: 8px 12px 8px 34px;
+    background: var(--ocean-deep);
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    outline: none;
+    transition: all var(--transition-fast);
+  }
+  .fleet-search input::placeholder { color: var(--text-faint); }
+  .fleet-search input:focus {
+    border-color: var(--bridge-glow);
+    box-shadow: var(--glow-sm), inset 0 0 0 1px rgba(56,189,248,0.1);
+    background: rgba(56,189,248,0.02);
+  }
+  .fleet-search .search-icon {
+    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: var(--text-faint); font-size: 12px;
+    transition: color var(--transition-fast);
+  }
+  .fleet-search input:focus + .search-icon { color: var(--bridge-glow); }
+
+  .fleet-add-btn {
+    margin: 6px 12px 10px;
+    padding: 9px;
+    background: transparent;
+    border: 1px dashed var(--bridge-border);
+    border-radius: var(--radius-md);
+    color: var(--text-faint);
+    font-size: 11.5px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all var(--transition-fast);
+    font-family: var(--font-sans);
+    font-weight: 500;
+  }
+  .fleet-add-btn:hover {
+    border-color: var(--bridge-glow);
+    color: var(--bridge-glow);
+    background: var(--bridge-glow-dim);
+    transform: scale(1.01);
+  }
+
+  /* Vessel Card — polished */
+  .vessel-card {
+    margin: 3px 8px 5px;
+    padding: 12px 14px;
+    background: var(--ocean-deep);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+  }
+  .vessel-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; width: 3px; height: 100%;
+    background: transparent;
+    border-radius: 2px 0 0 2px;
+    transition: background var(--transition-smooth);
+  }
+  .vessel-card:hover {
+    border-color: var(--bridge-border);
+    background: rgba(56, 189, 248, 0.03);
+    transform: translateX(2px);
+  }
+  .vessel-card.active {
+    border-color: rgba(56, 189, 248, 0.25);
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.06), rgba(56, 189, 248, 0.02));
+    box-shadow: var(--glow-sm), inset 0 0 30px rgba(56, 189, 248, 0.03);
+  }
+  .vessel-card.active::before { background: var(--bridge-glow); }
+  .vessel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+  .vessel-name-row { display: flex; align-items: center; gap: 9px; }
+  .vessel-icon { font-size: 17px; transition: transform var(--transition-spring); }
+  .vessel-card:hover .vessel-icon { transform: scale(1.15) rotate(-5deg); }
+  .vessel-name { font-weight: 600; font-size: 13px; letter-spacing: 0.2px; }
+  .vessel-status-badge {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-family: var(--font-mono);
+    transition: all var(--transition-fast);
+  }
+  .status-running {
+    background: var(--sea-green-dim);
+    color: var(--sea-green);
+    border: 1px solid rgba(52, 211, 153, 0.2);
+    animation: badge-pulse 3s ease-in-out infinite;
+  }
+  @keyframes badge-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.15); }
+    50% { box-shadow: 0 0 0 4px rgba(52,211,153,0); }
+  }
+  .status-idle {
+    background: rgba(100, 116, 139, 0.08);
+    color: var(--text-faint);
+    border: 1px solid rgba(100, 116, 139, 0.15);
+  }
+  .status-warning {
+    background: rgba(251, 191, 36, 0.1);
+    color: var(--alert-amber);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+  }
+  .vessel-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-faint);
+  }
+  .vessel-meta span { display: flex; align-items: center; gap: 4px; }
+  .branch-indicator { color: var(--bridge-glow); font-weight: 500; }
+  .diff-count { color: var(--text-faint); }
+  .diff-count.has-changes { color: var(--cargo-blue); font-weight: 600; }
+  .health-dot {
+    width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+  }
+  .health-good { background: var(--sea-green); box-shadow: 0 0 5px rgba(52,211,153,0.5); }
+  .health-warn { background: var(--alert-amber); box-shadow: 0 0 5px rgba(251,191,36,0.5); }
+  .health-bad { background: var(--alert-red); box-shadow: 0 0 5px rgba(248,113,113,0.5); }
+
+  /* ═══ Vessel Panel (Center) ═══ */
+  .vessel-panel { }
+  .vessel-panel-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--bridge-border);
+    flex-shrink: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+  }
+  .vessel-panel-icon {
+    font-size: 26px;
+    transition: transform var(--transition-spring);
+    filter: drop-shadow(0 2px 8px rgba(56,189,248,0.2));
+  }
+  .vessel-panel-info h2 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .vessel-panel-info .path {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 3px;
+  }
+  .vessel-tabs {
+    display: flex;
+    padding: 0 14px;
+    gap: 2px;
+    border-bottom: 1px solid var(--bridge-border);
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.15);
+  }
+  .vessel-tab {
+    padding: 10px 18px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-faint);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: var(--font-sans);
+    display: flex; align-items: center; gap: 7px;
+    position: relative;
+  }
+  .vessel-tab:hover {
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.02);
+  }
+  .vessel-tab.active {
+    color: var(--bridge-glow);
+  }
+  .vessel-tab.active::after {
+    content: '';
+    position: absolute; bottom: -1px; left: 16px; right: 16px;
+    height: 2px;
+    background: var(--bridge-glow);
+    border-radius: 1px;
+    box-shadow: 0 0 8px var(--bridge-glow);
+  }
+  .vessel-tab .tab-badge {
+    font-size: 9px;
+    padding: 1px 7px;
+    border-radius: 8px;
+    background: var(--ocean-deep);
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+
+  /* Crew Section */
+  .crew-section { padding: 14px 18px; }
+  .crew-member {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--ocean-deep);
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--radius-md);
+    margin-bottom: 10px;
+    transition: all var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+  }
+  .crew-member:last-child { margin-bottom: 0; }
+  .crew-member::after {
+    content: '';
+    position: absolute; bottom: 0; left: 14px; right: 14px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--bridge-border), transparent);
+  }
+  .crew-member:last-child::after { display: none; }
+  .crew-member:hover { border-color: var(--bridge-border-bright); transform: translateY(-1px); }
+  .crew-avatar {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700;
+    flex-shrink: 0;
+    transition: transform var(--transition-spring);
+  }
+  .crew-member:hover .crew-avatar { transform: scale(1.08) rotate(-3deg); }
+  .avatar-claude { background: rgba(167, 139, 250, 0.12); color: var(--crew-purple); border: 1px solid rgba(167, 139, 250, 0.25); }
+  .avatar-codex { background: rgba(96, 165, 250, 0.12); color: var(--cargo-blue); border: 1px solid rgba(96, 165, 250, 0.25); }
+  .avatar-idle { background: rgba(100, 116, 139, 0.08); color: var(--text-faint); border: 1px solid rgba(100, 116, 139, 0.15); }
+  .crew-info { flex: 1; min-width: 0; }
+  .crew-name { font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .crew-status-text {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .typing-indicator {
+    color: var(--sea-green);
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+  }
+  .typing-indicator span {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--sea-green);
+    animation: typing-bounce 1.4s infinite;
+  }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+  .crew-actions { display: flex; gap: 5px; flex-shrink: 0; }
+  .crew-btn {
+    width: 30px; height: 30px;
+    border: 1px solid var(--bridge-border);
+    background: var(--ocean-surface);
+    color: var(--text-faint);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; transition: all var(--transition-fast);
+  }
+  .crew-btn:hover {
+    border-color: var(--bridge-glow);
+    color: var(--bridge-glow);
+    box-shadow: var(--glow-sm);
+    transform: scale(1.05);
+  }
+
+  /* Station Log (Terminal) */
+  .station-log { padding: 14px 18px; display: none; animation: fadeSlideIn 0.3s ease; }
+  .station-log.visible { display: block; }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .terminal-window {
+    background: linear-gradient(180deg, #272c31 0%, #2C3238 100%);
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.65;
+    padding: 14px;
+    height: calc(100% - 28px);
+    overflow-y: auto;
+    position: relative;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.35);
+  }
+  /* Scan line overlay */
+  .terminal-window::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(169,221,118,0.12) 50%, transparent 100%);
+    animation: terminal-scan 3s linear infinite;
+    pointer-events: none;
+    opacity: 0.4;
+  }
+  @keyframes terminal-scan {
+    0% { top: 0; }
+    100% { top: 100%; }
+  }
+  .terminal-line { white-space: pre-wrap; word-break: break-all; transition: opacity 0.2s; }
+  .term-prompt { color: var(--sea-green); font-weight: 500; }
+  .term-cmd { color: var(--foam); }
+  .term-output { color: var(--text-dim); }
+  .term-info { color: var(--bridge-glow); }
+  .term-success { color: var(--sea-green); }
+  .term-error { color: var(--alert-red); }
+  .term-warning { color: var(--alert-amber); }
+
+  /* Engine Room */
+  .engine-room { padding: 14px 18px; display: none; animation: fadeSlideIn 0.3s ease; }
+  .engine-room.visible { display: block; }
+  .engine-command {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 13px;
+    background: var(--ocean-deep);
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--radius-md);
+    margin-bottom: 7px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+  }
+  .engine-command::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 0;
+    background: linear-gradient(90deg, rgba(251,191,36,0.06), transparent);
+    transition: width var(--transition-smooth);
+  }
+  .engine-command:hover::before { width: 100%; }
+  .engine-command:hover {
+    border-color: rgba(251, 191, 36, 0.3);
+    transform: translateX(3px);
+  }
+  .engine-command:last-child { margin-bottom: 0; }
+  .engine-icon {
+    width: 32px; height: 32px;
+    background: rgba(251, 191, 36, 0.08);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--brass);
+    flex-shrink: 0;
+    transition: all var(--transition-spring);
+  }
+  .engine-command:hover .engine-icon {
+    background: rgba(251, 191, 36, 0.15);
+    transform: scale(1.08) rotate(-5deg);
+  }
+  .engine-label { font-size: 12px; font-weight: 600; flex: 1; position: relative; z-index: 1; }
+  .engine-detail { font-size: 10px; font-family: var(--font-mono); color: var(--text-faint); position: relative; z-index: 1; }
+  .engine-play {
+    width: 28px; height: 28px;
+    border: none; background: linear-gradient(135deg, var(--brass), #d97706);
+    color: var(--ocean-abyss);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+    position: relative; z-index: 1;
+    box-shadow: 0 2px 8px rgba(251,191,36,0.25);
+  }
+  .engine-play:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 16px rgba(251,191,36,0.4);
+  }
+  .engine-play:active { transform: scale(0.95); }
+
+  /* ═══ Cargo Panel (Right) ═══ */
+  .cargo-panel { }
+  .cargo-summary {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--bridge-border);
+    flex-shrink: 0;
+  }
+  .cargo-stats { display: flex; gap: 10px; margin-bottom: 12px; }
+  .cargo-stat {
+    flex: 1;
+    text-align: center;
+    padding: 10px 6px;
+    background: var(--ocean-deep);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--bridge-border);
+    transition: all var(--transition-fast);
+  }
+  .cargo-stat:hover { border-color: var(--bridge-border-bright); transform: translateY(-1px); }
+  .cargo-stat-value { font-size: 22px; font-weight: 800; font-family: var(--font-mono); line-height: 1; }
+  .cargo-stat-value.added { color: var(--sea-green); text-shadow: 0 0 12px rgba(52,211,153,0.3); }
+  .cargo-stat-value.modified { color: var(--alert-amber); text-shadow: 0 0 12px rgba(251,191,36,0.3); }
+  .cargo-stat-value.deleted { color: var(--alert-red); text-shadow: 0 0 12px rgba(248,113,113,0.3); }
+  .cargo-stat-label { font-size: 8.5px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-faint); margin-top: 5px; font-weight: 600; }
+
+  /* AI Scanner Card */
+  .ai-scanner {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.06), rgba(167, 139, 250, 0.04));
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ai-scanner::before {
+    content: '';
+    position: absolute; top: -50%; right: -50%;
+    width: 100%; height: 200%;
+    background: conic-gradient(from 0deg, transparent, rgba(56,189,248,0.05), transparent, rgba(167,139,250,0.03), transparent);
+    animation: scanner-rotate 8s linear infinite;
+  }
+  @keyframes scanner-rotate { to { transform: rotate(360deg); } }
+  .ai-scanner-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--bridge-glow);
+    margin-bottom: 7px;
+    position: relative;
+  }
+  .ai-scanner-text {
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    position: relative;
+  }
+  .ai-scanner-text strong { color: var(--foam); }
+  .risk-gate {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(56, 189, 248, 0.12);
+    position: relative;
+  }
+  .risk-badge {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+  }
+  .risk-low {
+    background: rgba(52, 211, 153, 0.12);
+    color: var(--sea-green);
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    box-shadow: 0 0 8px rgba(52,211,153,0.1);
+  }
+  .risk-checks { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .risk-check {
+    font-size: 9.5px;
+    color: var(--sea-green);
+    display: flex; align-items: center; gap: 4px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+  }
+
+  /* Cargo File List */
+  .cargo-files { padding: 10px 14px; flex: 1; overflow-y: auto; }
+  .cargo-file {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-bottom: 1px;
+    border: 1px solid transparent;
+  }
+  .cargo-file:hover {
+    background: rgba(255,255,255,0.02);
+    border-color: var(--bridge-border);
+  }
+  .file-icon { font-size: 14px; flex-shrink: 0; }
+  .file-path { flex: 1; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+  .file-stat {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    flex-shrink: 0;
+    min-width: 48px;
+    text-align: right;
+  }
+  .stat-added { color: var(--sea-green); }
+  .stat-modified { color: var(--alert-amber); }
+  .stat-deleted { color: var(--alert-red); }
+
+  /* Diff Detail */
+  .diff-detail {
+    display: none;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.25);
+    border-top: 1px solid var(--bridge-border);
+    animation: expandIn 0.25s ease;
+  }
+  @keyframes expandIn {
+    from { opacity: 0; max-height: 0; }
+    to { opacity: 1; max-height: 300px; }
+  }
+  .diff-detail.visible { display: block; }
+  .diff-hunk {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    line-height: 1.6;
+    margin-bottom: 4px;
+  }
+  .diff-hunk-header {
+    color: var(--text-faint);
+    font-size: 9.5px;
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--bridge-border);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .diff-add { color: #A9DD76; background: rgba(169,221,118,0.1); display: block; padding: 0 4px; margin: 1px 0; border-radius: 2px; }
+  .diff-remove { color: #FF654A; background: rgba(255,101,74,0.1); display: block; padding: 0 4px; margin: 1px 0; border-radius: 2px; }
+  .diff-context { color: var(--text-faint); display: block; padding: 0 4px; }
+
+  /* Sail Area */
+  .sail-area {
+    padding: 14px 16px;
+    border-top: 1px solid var(--bridge-border);
+    flex-shrink: 0;
+    background: linear-gradient(180deg, transparent, rgba(56,189,248,0.02));
+  }
+  .sail-btn {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, #78DDE8 0%, #41B0E0 50%, #2E9EBC 100%);
+    border: none;
+    border-radius: var(--radius-md);
+    color: #1a1d21;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    letter-spacing: 0.5px;
+    transition: all var(--transition-smooth);
+    box-shadow: 0 4px 20px rgba(120,221,232,0.25), inset 0 1px 0 rgba(255,255,255,0.18);
+    position: relative;
+    overflow: hidden;
+  }
+  .sail-btn::before {
+    content: '';
+    position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+    transition: left 0.6s ease;
+  }
+  .sail-btn:hover::before { left: 100%; }
+  .sail-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(120,221,232,0.38), inset 0 1px 0 rgba(255,255,255,0.22);
+  }
+  .sail-btn:active { transform: translateY(0); box-shadow: 0 2px 10px rgba(120,221,232,0.2); }
+  .sail-secondary {
+    display: flex;
+    gap: 7px;
+    margin-top: 9px;
+  }
+  .sail-secondary button {
+    flex: 1;
+    padding: 8px;
+    background: var(--ocean-deep);
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted, var(--text-dim));
+    font-size: 11px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    transition: all var(--transition-fast);
+    font-family: var(--font-sans);
+    font-weight: 500;
+  }
+  .sail-secondary button:hover {
+    border-color: var(--bridge-border-bright);
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.03);
+  }
+
+  /* ═══ Activity Feed (Bottom) ═══ */
+  .feed-panel { grid-column: 1 / 4; }
+  .feed-list {
+    padding: 8px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .feed-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    font-size: 11.5px;
+    position: relative;
+  }
+  .feed-item:hover { background: rgba(255,255,255,0.02); }
+  .feed-item::before {
+    content: '';
+    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 2px; height: 0;
+    border-radius: 1px;
+    transition: height var(--transition-fast);
+  }
+  .feed-item:hover::before { height: 16px; background: var(--bridge-glow); }
+  .feed-time {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    min-width: 44px;
+    flex-shrink: 0;
+    font-weight: 500;
+  }
+  .feed-icon { font-size: 13px; flex-shrink: 0; width: 18px; text-align: center; }
+  .feed-text { color: var(--text-secondary); flex: 1; }
+  .feed-text strong { color: var(--foam); }
+  .feed-text .vessel-ref { color: var(--bridge-glow); font-weight: 600; }
+  .feed-tag {
+    font-size: 8.5px;
+    padding: 2px 7px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .tag-ship { background: rgba(52,211,153,0.1); color: var(--sea-green); }
+  .tag-agent { background: rgba(167,139,250,0.1); color: var(--crew-purple); }
+  .tag-error { background: rgba(248,113,113,0.1); color: var(--alert-red); }
+  .tag-deploy { background: rgba(96,165,250,0.1); color: var(--cargo-blue); }
+
+  /* ═══ Bottom Navigation + Views ═══ */
+  .bottom-nav {
+    height: 48px;
+    background: linear-gradient(180deg, var(--deck) 0%, rgba(6,12,23,0.98) 100%);
+    border-top: 1px solid var(--bridge-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0 20px;
+    position: relative;
+    z-index: 200;
+  }
+  .bottom-nav::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--bridge-glow-dim), transparent);
+  }
+  .nav-item {
+    padding: 7px 18px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-faint);
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: all var(--transition-fast);
+    font-family: var(--font-sans);
+    position: relative;
+  }
+  .nav-item:hover {
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.03);
+  }
+  .nav-item.active {
+    background: var(--bridge-glow-dim);
+    color: var(--bridge-glow);
+    box-shadow: var(--glow-sm);
+  }
+  .nav-item.active::after {
+    content: '';
+    position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
+    width: 20px; height: 2px;
+    background: var(--bridge-glow);
+    border-radius: 1px;
+    box-shadow: 0 0 6px var(--bridge-glow);
+  }
+
+  /* ═══ OVERLAY VIEWS (Journal, Charts, Settings) ═══ */
+  .overlay-view {
+    position: fixed;
+    top: 38px; left: 0; right: 0; bottom: 48px;
+    background: var(--ocean-abyss);
+    z-index: 150;
+    display: none;
+    animation: overlayIn 0.35s cubic-bezier(.4,0,.2,1);
+    overflow-y: auto;
+  }
+  .overlay-view.visible { display: block; }
+  @keyframes overlayIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .overlay-header {
+    padding: 24px 32px 20px;
+    border-bottom: 1px solid var(--bridge-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--ocean-abyss);
+    z-index: 10;
+  }
+  .overlay-title-group h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .overlay-title-group p {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .overlay-close {
+    width: 36px; height: 36px;
+    border: 1px solid var(--bridge-border);
+    background: var(--ocean-deep);
+    color: var(--text-dim);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--transition-fast);
+  }
+  .overlay-close:hover {
+    border-color: var(--alert-red);
+    color: var(--alert-red);
+  }
+  .overlay-body { padding: 24px 32px; }
+
+  /* ── Captain's Log (Journal) View ── */
+  .journal-date {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-faint);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--bridge-border);
+  }
+  .journal-entry {
+    background: var(--ocean-deep);
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    transition: all var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+  }
+  .journal-entry:hover { border-color: var(--bridge-border-bright); }
+  .journal-entry::before {
+    content: '';
+    position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+    border-radius: 4px 0 0 4px;
+  }
+  .journal-entry.entry-ship::before { background: var(--sea-green); }
+  .journal-entry.entry-agent::before { background: var(--crew-purple); }
+  .journal-entry.entry-error::before { background: var(--alert-red); }
+  .journal-entry.entry-note::before { background: var(--bridge-glow); }
+  .journal-time {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    font-weight: 500;
+  }
+  .journal-vessel {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--bridge-glow);
+    margin-left: 8px;
+  }
+  .journal-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 8px 0 10px;
+  }
+  .journal-body {
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text-secondary);
+  }
+  .journal-body code {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    background: var(--ocean-surface);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--sea-green);
+  }
+  .journal-tags {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .journal-tag {
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Charts Dashboard View ── */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 20px;
+  }
+  .chart-card {
+    background: var(--ocean-deep);
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    transition: all var(--transition-fast);
+  }
+  .chart-card:hover { border-color: var(--bridge-border-bright); }
+  .chart-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .chart-card-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chart-card-value {
+    font-size: 28px;
+    font-weight: 800;
+    font-family: var(--font-mono);
+  }
+  .chart-card-subtitle {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  /* Mini bar chart (CSS-only) */
+  .mini-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 80px;
+    margin-top: 16px;
+  }
+  .mini-bar {
+    flex: 1;
+    background: linear-gradient(180deg, var(--bridge-glow), rgba(56,189,248,0.2));
+    border-radius: 3px 3px 0 0;
+    min-width: 8px;
+    transition: height var(--transition-smooth);
+    position: relative;
+  }
+  .mini-bar:hover { filter: brightness(1.2); }
+  .mini-bar.bar-green { background: linear-gradient(180deg, var(--sea-green), rgba(52,211,153,0.2)); }
+  .mini-bar.bar-purple { background: linear-gradient(180deg, var(--crew-purple), rgba(167,139,250,0.2)); }
+  .mini-bar.bar-amber { background: linear-gradient(180deg, var(--alert-amber), rgba(251,191,36,0.2)); }
+  /* Health gauge */
+  .health-gauge {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .gauge-ring {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 5px solid var(--bridge-border);
+    border-top-color: var(--sea-green);
+    border-right-color: var(--sea-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    color: var(--sea-green);
+    position: relative;
+  }
+  .gauge-labels { flex: 1; }
+  .gauge-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .gauge-label-name { color: var(--text-secondary); }
+  .gauge-label-val { font-family: var(--font-mono); font-weight: 600; font-size: 10px; }
+  /* Agent comparison bars */
+  .agent-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .agent-row-name {
+    width: 90px;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .agent-row-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--ocean-surface);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .agent-row-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s cubic-bezier(.4,0,.2,1);
+  }
+  .agent-row-val {
+    width: 40px;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  /* ── Helm (Settings) View ── */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 0;
+    max-width: 1000px;
+  }
+  .settings-nav {
+    border-right: 1px solid var(--bridge-border);
+    padding: 8px 0;
+  }
+  .settings-nav-item {
+    padding: 10px 20px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all var(--transition-fast);
+    border-right: 2px solid transparent;
+  }
+  .settings-nav-item:hover { color: var(--text-secondary); background: rgba(255,255,255,0.02); }
+  .settings-nav-item.active {
+    color: var(--bridge-glow);
+    background: var(--bridge-glow-dim);
+    border-right-color: var(--bridge-glow);
+  }
+  .settings-content { padding: 24px 32px; }
+  .settings-section { margin-bottom: 32px; }
+  .settings-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .setting-label { font-size: 13px; }
+  .setting-desc { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+  /* Toggle switch */
+  .toggle {
+    width: 44px; height: 24px;
+    background: var(--ocean-surface);
+    border: 1px solid var(--bridge-border);
+    border-radius: 12px;
+    cursor: pointer;
+    position: relative;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--bridge-glow); border-color: var(--bridge-glow); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 18px; height: 18px;
+    background: var(--foam);
+    border-radius: 50%;
+    transition: all var(--transition-spring);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .toggle.on::after { left: 22px; }
+  /* Input field */
+  .setting-input {
+    padding: 8px 12px;
+    background: var(--ocean-deep);
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    outline: none;
+    width: 260px;
+    transition: all var(--transition-fast);
+  }
+  .setting-input:focus { border-color: var(--bridge-glow); box-shadow: var(--glow-sm); }
+  /* Theme swatches */
+  .theme-swatches { display: flex; gap: 10px; margin-top: 8px; }
+  .theme-swatch {
+    width: 48px; height: 48px;
+    border-radius: var(--radius-md);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+  }
+  .theme-swatch:hover { transform: scale(1.08); }
+  .theme-swatch.active { border-color: var(--bridge-glow); box-shadow: var(--glow-sm); }
+  .theme-swatch.active::after {
+    content: '✓';
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+  .swatch-dark { background: linear-gradient(135deg, #0a1020, #131c2e); }
+  .swatch-midnight { background: linear-gradient(135deg, #0c1220, #1a1a2e); }
+  .swatch-radar { background: linear-gradient(135deg, #0a1610, #0d2818); }
+  .swatch-arctic { background: linear-gradient(135deg, #1a1a2e, #e8eef5); }
+
+  /* Tooltip */
+  [data-tooltip] { position: relative; }
+  [data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(-4px);
+    padding: 5px 10px;
+    background: var(--ocean-surface);
+    border: 1px solid var(--bridge-border);
+    border-radius: 6px;
+    font-size: 10.5px;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    opacity: 0;
+    pointer-events: none;
+    transition: all var(--transition-fast);
+    z-index: 1000;
+  }
+  [data-tooltip]:hover::after { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+</style>
+</head>
+<body>
+
+<!-- ═══ Title Bar ═══ -->
+<div class="title-bar">
+  <div class="title-bar-left">
+    <div class="anchor-icon">⚓</div>
+    <span class="app-name">Bridge</span>
+  </div>
+  <div class="title-bar-center">
+    <span class="status-dot"></span>
+    All Systems Nominal · v0.1.0
+  </div>
+  <div class="title-bar-right">
+    <button class="title-btn" data-tooltip="Theme">🌙</button>
+    <button class="title-btn" data-tooltip="Notifications (2)">🔔</button>
+    <button class="title-btn" data-tooltip="Settings">⚙️</button>
+  </div>
+</div>
+
+<!-- ═══ Main Bridge Layout ═══ -->
+<div class="bridge-wrapper">
+<div class="bridge-layout">
+
+  <!-- ── FLEET PANEL ── -->
+  <div class="panel fleet-panel">
+    <div class="panel-header">
+      <span class="panel-title"><span class="icon">🚢</span> Fleet</span>
+      <div class="panel-actions">
+        <button class="panel-action-btn" title="Filter">⊞</button>
+        <button class="panel-action-btn" title="Sort">⇅</button>
+      </div>
+    </div>
+    <div class="fleet-search">
+      <input type="text" placeholder="Search vessels..." />
+      <span class="search-icon">⌕</span>
+    </div>
+    <div class="panel-body" id="fleetList">
+      <div class="vessel-card active" onclick="selectVessel(this, 'web-dev-cody')">
+        <div class="vessel-header">
+          <div class="vessel-name-row">
+            <span class="vessel-icon">🚢</span>
+            <span class="vessel-name">web-dev-cody</span>
+          </div>
+          <span class="vessel-status-badge status-running">● Running</span>
+        </div>
+        <div class="vessel-meta">
+          <span class="branch-indicator">⎇ main</span>
+          <span class="diff-count has-changes">±3 files</span>
+          <span><span class="health-dot health-good"></span></span>
+        </div>
+      </div>
+
+      <div class="vessel-card" onclick="selectVessel(this, 'auth-service')">
+        <div class="vessel-header">
+          <div class="vessel-name-row">
+            <span class="vessel-icon">🚢</span>
+            <span class="vessel-name">auth-service</span>
+          </div>
+          <span class="vessel-status-badge status-idle">○ Idle</span>
+        </div>
+        <div class="vessel-meta">
+          <span class="branch-indicator">⎇ main</span>
+          <span class="diff-count">clean</span>
+          <span><span class="health-dot health-good"></span></span>
+        </div>
+      </div>
+
+      <div class="vessel-card" onclick="selectVessel(this, 'mobile-app')">
+        <div class="vessel-header">
+          <div class="vessel-name-row">
+            <span class="vessel-icon">🚢</span>
+            <span class="vessel-name">mobile-app</span>
+          </div>
+          <span class="vessel-status-badge status-warning">⚠ Warning</span>
+        </div>
+        <div class="vessel-meta">
+          <span class="branch-indicator">⎇ feat/auth</span>
+          <span class="diff-count has-changes">±7 files</span>
+          <span><span class="health-dot health-warn"></span></span>
+        </div>
+      </div>
+
+      <div class="vessel-card" onclick="selectVessel(this, 'infra')">
+        <div class="vessel-header">
+          <div class="vessel-name-row">
+            <span class="vessel-icon">🚢</span>
+            <span class="vessel-name">infra</span>
+          </div>
+          <span class="vessel-status-badge status-idle">○ Idle</span>
+        </div>
+        <div class="vessel-meta">
+          <span class="branch-indicator">⎇ main</span>
+          <span class="diff-count">deployed</span>
+          <span><span class="health-dot health-good"></span></span>
+        </div>
+      </div>
+
+      <div class="vessel-card" onclick="selectVessel(this, 'design-system')">
+        <div class="vessel-header">
+          <div class="vessel-name-row">
+            <span class="vessel-icon">🚢</span>
+            <span class="vessel-name">design-system</span>
+          </div>
+          <span class="vessel-status-badge status-idle">○ Idle</span>
+        </div>
+        <div class="vessel-meta">
+          <span class="branch-indicator">⎇ v3-tokens</span>
+          <span class="diff-count has-changes">±12 files</span>
+          <span><span class="health-dot health-good"></span></span>
+        </div>
+      </div>
+
+      <button class="fleet-add-btn">+ Add Vessel</button>
+    </div>
+  </div>
+
+  <!-- ── VESSEL PANEL (Center) ── -->
+  <div class="panel vessel-panel">
+    <div class="vessel-panel-top">
+      <span class="vessel-panel-icon">🚢</span>
+      <div class="vessel-panel-info">
+        <h2 id="vesselTitle">web-dev-cody</h2>
+        <div class="path" id="vesselPath">~/Projects/web-dev-cody</div>
+      </div>
+    </div>
+
+    <div class="vessel-tabs">
+      <button class="vessel-tab active" onclick="switchTab(this, 'crew')">
+        👥 Crew <span class="tab-badge">2</span>
+      </button>
+      <button class="vessel-tab" onclick="switchTab(this, 'log')">
+        📋 Station Log
+      </button>
+      <button class="vessel-tab" onclick="switchTab(this, 'engine')">
+        ⚙️ Engine Room
+      </button>
+    </div>
+
+    <div class="crew-section" id="tab-crew">
+      <div class="crew-member">
+        <div class="crew-avatar avatar-claude">C</div>
+        <div class="crew-info">
+          <div class="crew-name">
+            Claude Code
+            <span style="font-size:9px;color:var(--sea-green);font-weight:600;">● active</span>
+          </div>
+          <div class="crew-status-text">
+            <span class="typing-indicator"><span></span><span></span><span></span></span>
+            Adding about route and header link...
+          </div>
+        </div>
+        <div class="crew-actions">
+          <button class="crew-btn" title="Focus">◉</button>
+          <button class="crew-btn" title="Stop">■</button>
+        </div>
+      </div>
+
+      <div class="crew-member">
+        <div class="crew-avatar avatar-codex">Ω</div>
+        <div class="crew-info">
+          <div class="crew-name">
+            Codex
+            <span style="font-size:9px;color:var(--text-faint);font-weight:500;">○ idle</span>
+          </div>
+          <div class="crew-status-text">Ready for orders — no active task</div>
+        </div>
+        <div class="crew-actions">
+          <button class="crew-btn" title="Launch">▶</button>
+          <button class="crew-btn" title="Configure">⚙</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <button class="fleet-add-btn" style="border-style: solid; border-color: var(--bridge-border);">
+          + Recruit Crew Member
+        </button>
+      </div>
+    </div>
+
+    <div class="station-log" id="tab-log">
+      <div class="terminal-window">
+        <div class="terminal-line"><span class="term-prompt">❮ claude</span> <span class="term-cmd">Please add an about route and link in the header</span></div>
+        <div class="terminal-line term-output">  Analyzing request structure...</div>
+        <div class="terminal-line term-output">  Scanning project file tree...</div>
+        <div class="terminal-line term-info">  ✓ Found Next.js App Router at src/app/</div>
+        <div class="terminal-line term-info">  ✓ Located header component at src/components/Header.tsx</div>
+        <div class="terminal-line term-output">  Creating src/app/about/page.tsx...</div>
+        <div class="terminal-line term-success">  ✓ Created about page (42 lines)</div>
+        <div class="terminal-line term-output">  Patching src/components/Header.tsx...</div>
+        <div class="terminal-line term-success">  ✓ Added About link to navigation (8 lines changed)</div>
+        <div class="terminal-line term-output">  Running type checker...</div>
+        <div class="terminal-line term-success">  ✓ Type check passed — 0 errors</div>
+        <div class="terminal-line term-info">  → 3 files changed. Ready for review.</div>
+        <div class="terminal-line"><span class="term-prompt">❮</span> <span style="color:var(--text-faint);animation:cursor-blink 1s step-end infinite;">▊</span></div>
+      </div>
+    </div>
+
+    <div class="engine-room" id="tab-engine">
+      <div class="engine-command">
+        <div class="engine-icon">▶</div>
+        <div>
+          <div class="engine-label">Dev Server</div>
+          <div class="engine-detail">npm run dev — :3000</div>
+        </div>
+        <button class="engine-play">▶</button>
+      </div>
+      <div class="engine-command">
+        <div class="engine-icon">🧪</div>
+        <div>
+          <div class="engine-label">Test Suite</div>
+          <div class="engine-detail">vitest run</div>
+        </div>
+        <button class="engine-play">▶</button>
+      </div>
+      <div class="engine-command">
+        <div class="engine-icon">✨</div>
+        <div>
+          <div class="engine-label">Lint</div>
+          <div class="engine-detail">eslint . --fix</div>
+        </div>
+        <button class="engine-play">▶</button>
+      </div>
+      <div class="engine-command">
+        <div class="engine-icon">📦</div>
+        <div>
+          <div class="engine-label">Build</div>
+          <div class="engine-detail">next build</div>
+        </div>
+        <button class="engine-play">▶</button>
+      </div>
+      <div class="engine-command">
+        <div class="engine-icon">🚀</div>
+        <div>
+          <div class="engine-label">Deploy</div>
+          <div class="engine-detail">vercel --prod</div>
+        </div>
+        <button class="engine-play">▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CARGO PANEL (Right) ── -->
+  <div class="panel cargo-panel">
+    <div class="panel-header">
+      <span class="panel-title"><span class="icon">📦</span> Cargo Manifest</span>
+      <div class="panel-actions">
+        <button class="panel-action-btn" title="Refresh">↻</button>
+      </div>
+    </div>
+
+    <div class="cargo-summary">
+      <div class="cargo-stats">
+        <div class="cargo-stat">
+          <div class="cargo-stat-value added">+1</div>
+          <div class="cargo-stat-label">Added</div>
+        </div>
+        <div class="cargo-stat">
+          <div class="cargo-stat-value modified">±2</div>
+          <div class="cargo-stat-label">Modified</div>
+        </div>
+        <div class="cargo-stat">
+          <div class="cargo-stat-value deleted">−0</div>
+          <div class="cargo-stat-label">Deleted</div>
+        </div>
+      </div>
+
+      <div class="ai-scanner">
+        <div class="ai-scanner-header">🔍 Cargo Scanner (AI)</div>
+        <div class="ai-scanner-text">Adds an <strong>About</strong> page route and navigation link in the header component. No breaking changes or new dependencies introduced.</div>
+        <div class="risk-gate">
+          <span class="risk-badge risk-low">🟢 Low Risk</span>
+          <div class="risk-checks">
+            <span class="risk-check">✓ No secrets</span>
+            <span class="risk-check">✓ No console.log</span>
+            <span class="risk-check">✓ Types OK</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cargo-files" id="cargoFileList">
+      <div class="cargo-file" onclick="toggleDiffDetail(this)">
+        <span class="file-icon">📄</span>
+        <span class="file-path">src/app/about/page.tsx</span>
+        <span class="file-stat stat-added">+42</span>
+      </div>
+      <div class="diff-detail">
+        <div class="diff-hunk-header">@@ -0,0 +1,42 @@  (new file)</div>
+        <div class="diff-hunk">
+          <span class="diff-add">+import type { Metadata } from 'next'</span>
+          <span class="diff-add">+</span>
+          <span class="diff-add">+export const metadata: Metadata = {</span>
+          <span class="diff-add">+  title: 'About | Web Dev Cody',</span>
+          <span class="diff-add">+}</span>
+          <span class="diff-add">+</span>
+          <span class="diff-add">+export default function AboutPage() {</span>
+          <span class="diff-add">+  return (</span>
+          <span class="diff-add">+    &lt;main className="min-h-screen p-8"&gt;</span>
+          <span class="diff-add">+      &lt;h1&gt;About&lt;/h1&gt;</span>
+          <span class="diff-add">+      &lt;p&gt;...&lt;/p&gt;</span>
+          <span class="diff-add">+    &lt;/main&gt;</span>
+          <span class="diff-add">+  )</span>
+          <span class="diff-add">+}</span>
+        </div>
+      </div>
+
+      <div class="cargo-file" onclick="toggleDiffDetail(this)">
+        <span class="file-icon">📄</span>
+        <span class="file-path">src/components/Header.tsx</span>
+        <span class="file-stat stat-modified">±8</span>
+      </div>
+      <div class="diff-detail">
+        <div class="diff-hunk-header">@@ -12,6 +12,10 @@  src/components/Header.tsx</div>
+        <div class="diff-hunk">
+          <span class="diff-context">   const navItems = [</span>
+          <span class="diff-context">     { label: 'Home', href: '/' },</span>
+          <span class="diff-add">+    { label: 'About', href: '/about' },</span>
+          <span class="diff-context">     { label: 'Blog', href: '/blog' },</span>
+          <span class="diff-context">     { label: 'Contact', href: '/contact' },</span>
+          <span class="diff-remove">-    // TODO: add about link</span>
+        </div>
+      </div>
+
+      <div class="cargo-file" onclick="toggleDiffDetail(this)">
+        <span class="file-icon">📄</span>
+        <span class="file-path">src/styles/globals.css</span>
+        <span class="file-stat stat-modified">±3</span>
+      </div>
+      <div class="diff-detail">
+        <div class="diff-hunk-header">@@ -45,6 +45,9 @@  src/styles/globals.css</div>
+        <div class="diff-hunk">
+          <span class="diff-context"> .about-page {</span>
+          <span class="diff-add">+  padding: 2rem;</span>
+          <span class="diff-add">+  max-width: 64ch;</span>
+          <span class="diff-add">+  margin: 0 auto;</span>
+          <span class="diff-context"> }</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sail-area">
+      <button class="sail-btn" onclick="setSail()">
+        ⚓ Set Sail — Commit & Push
+      </button>
+      <div class="sail-secondary">
+        <button>✏ Edit Message</button>
+        <button>📤 Stash Only</button>
+        <button>🔷 Create PR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ACTIVITY FEED (Bottom) ── -->
+  <div class="panel feed-panel">
+    <div class="panel-header">
+      <span class="panel-title"><span class="icon">📜</span> Ship's Log</span>
+      <div class="panel-actions">
+        <button class="panel-action-btn" title="Filter">⊞</button>
+        <button class="panel-action-btn" title="Clear">✕</button>
+      </div>
+    </div>
+    <div class="feed-list">
+      <div class="feed-item">
+        <span class="feed-time">14:32</span>
+        <span class="feed-icon">👤</span>
+        <span class="feed-text"><span class="vessel-ref">web-dev-cody:</span> Claude Code produced <strong>3 file changes</strong></span>
+        <span class="feed-tag tag-agent">Agent</span>
+      </div>
+      <div class="feed-item">
+        <span class="feed-time">14:28</span>
+        <span class="feed-icon">⚠️</span>
+        <span class="feed-text"><span class="vessel-ref">mobile-app:</span> Test run failed — <strong>AuthContext.tsx:42</strong> expected auth token</span>
+        <span class="feed-tag tag-error">Error</span>
+      </div>
+      <div class="feed-item">
+        <span class="feed-time">14:15</span>
+        <span class="feed-icon">⚓</span>
+        <span class="feed-text"><span class="vessel-ref">auth-service:</span> Set sail — pushed <strong>2 commits</strong> to main</span>
+        <span class="feed-tag tag-ship">Shipped</span>
+      </div>
+      <div class="feed-item">
+        <span class="feed-time">14:00</span>
+        <span class="feed-icon">🚀</span>
+        <span class="feed-text"><span class="vessel-ref">infra:</span> Deploy completed — <strong>production stable</strong></span>
+        <span class="feed-tag tag-deploy">Deploy</span>
+      </div>
+      <div class="feed-item">
+        <span class="feed-time">13:42</span>
+        <span class="feed-icon">👤</span>
+        <span class="feed-text"><span class="vessel-ref">design-system:</span> Codex refactored <strong>12 token files</strong> to v3 format</span>
+        <span class="feed-tag tag-agent">Agent</span>
+      </div>
+      <div class="feed-item">
+        <span class="feed-time">13:20</span>
+        <span class="feed-icon">📦</span>
+        <span class="feed-text">System: <strong>Bridge v0.1.0</strong> ready for sea trials</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end bridge-layout -->
+</div><!-- end bridge-wrapper -->
+
+<!-- ═══ Bottom Nav ═══ -->
+<div class="bottom-nav">
+  <button class="nav-item active" onclick="showOverlay(null)">🏠 Bridge</button>
+  <button class="nav-item" onclick="showOverlay('journal')">📋 Journal</button>
+  <button class="nav-item" onclick="showOverlay('charts')">📊 Charts</button>
+  <button class="nav-item" onclick="showOverlay('plugins')">🔌 Dry Dock</button>
+  <button class="nav-item" onclick="showOverlay('settings')">🧰 Helm</button>
+</div>
+
+<!-- ═══ OVERLAY: Captain's Log (Journal) ═══ -->
+<div class="overlay-view" id="view-journal">
+  <div class="overlay-header">
+    <div class="overlay-title-group">
+      <h1>📋 Captain's Log</h1>
+      <p>Auto-generated daily journal for your fleet</p>
+    </div>
+    <button class="overlay-close" onclick="closeOverlay()">✕</button>
+  </div>
+  <div class="overlay-body">
+    <div class="journal-date">Today — May 21, 2026</div>
+
+    <div class="journal-entry entry-agent">
+      <span class="journal-time">14:32</span>
+      <span class="journal-vessel">🚢 web-dev-cody</span>
+      <div class="journal-title">Claude Code completed feature request</div>
+      <div class="journal-body">
+        Agent <code>Claude Code</code> completed the request "Add an about route and link in the header".
+        Produced <strong>3 file changes</strong>: created <code>src/app/about/page.tsx</code>,
+        modified <code>src/components/Header.tsx</code> (+8 lines), and updated
+        <code>src/styles/globals.css</code> (+3 lines). All type checks passed.
+        Status: <strong style="color:var(--sea-green)">Awaiting review</strong>.
+      </div>
+      <div class="journal-tags">
+        <span class="journal-tag" style="background:rgba(167,139,250,0.1);color:var(--crew-purple);">Agent</span>
+        <span class="journal-tag" style="background:rgba(96,165,250,0.1);color:var(--cargo-blue);">Feature</span>
+        <span class="journal-tag" style="background:rgba(245,158,11,0.1);color:var(--alert-amber);">Review Needed</span>
+      </div>
+    </div>
+
+    <div class="journal-entry entry-error">
+      <span class="journal-time">14:28</span>
+      <span class="journal-vessel">🚢 mobile-app</span>
+      <div class="journal-title">Test failure detected</div>
+      <div class="journal-body">
+        Automated test run failed in <code>AuthContext.tsx:42</code>.
+        Error: <em>"Expected auth token to be defined but received undefined"</em>.
+        Likely caused by recent changes on branch <code>feat/auth</code>.
+        This vessel's health score dropped to <strong style="color:var(--alert-amber)">yellow</strong>.
+      </div>
+      <div class="journal-tags">
+        <span class="journal-tag" style="background:rgba(248,113,113,0.1);color:var(--alert-red);">Error</span>
+        <span class="journal-tag" style="background:rgba(251,191,36,0.1);color:var(--alert-amber);">Attention</span>
+      </div>
+    </div>
+
+    <div class="journal-entry entry-ship">
+      <span class="journal-time">14:15</span>
+      <span class="journal-vessel">🚢 auth-service</span>
+      <div class="journal-title">Set sail — 2 commits shipped to main</div>
+      <div class="journal-body">
+        Committed and pushed <strong>2 commits</strong> to <code>main</code>:
+        <code>feat: add OAuth2 refresh token rotation</code> and
+        <code>fix: resolve session race condition</code>.
+        CI/CD pipeline triggered. Deploying to production.
+      </div>
+      <div class="journal-tags">
+        <span class="journal-tag" style="background:rgba(52,211,153,0.1);color:var(--sea-green);">Shipped</span>
+        <span class="journal-tag" style="background:rgba(96,165,250,0.1);color:var(--cargo-blue);">Deploy</span>
+      </div>
+    </div>
+
+    <div class="journal-entry entry-ship">
+      <span class="journal-time">14:00</span>
+      <span class="journal-vessel">🚢 infra</span>
+      <div class="journal-title">Production deployment stable</div>
+      <div class="journal-body">
+        Infrastructure deployment completed successfully.
+        All services healthy. Uptime: <strong>99.97%</strong>. No incidents reported this week.
+      </div>
+      <div class="journal-tags">
+        <span class="journal-tag" style="background:rgba(52,211,153,0.1);color:var(--sea-green);">Deploy</span>
+        <span class="journal-tag" style="background:rgba(74,222,128,0.1);color:var(--radar-green);">Healthy</span>
+      </div>
+    </div>
+
+    <div class="journal-entry entry-note">
+      <span class="journal-time">13:20</span>
+      <div class="journal-title">System note: Bridge initialized</div>
+      <div class="journal-body">
+        <strong>Bridge v0.1.0</strong> came online. 5 vessels loaded into fleet.
+        1 agent session active across 1 vessel. All systems nominal.
+      </div>
+      <div class="journal-tags">
+        <span class="journal-tag" style="background:rgba(56,189,248,0.1);color:var(--bridge-glow);">System</span>
+      </div>
+    </div>
+
+    <div class="journal-date">Yesterday — May 20, 2026</div>
+
+    <div class="journal-entry entry-agent">
+      <span class="journal-time">22:41</span>
+      <span class="journal-vessel">🚢 design-system</span>
+      <div class="journal-title">Codex refactored token system to v3</div>
+      <div class="journal-body">
+        Night watch task: Codex refactored <strong>12 token files</strong> from v2 format to new v3 architecture.
+        Breaking change for consumers — migration guide needed.
+      </div>
+      <div class="journal-tags">
+        <span class="journal-tag" style="background:rgba(167,139,250,0.1);color:var(--crew-purple);">Night Watch</span>
+        <span class="journal-tag" style="background:rgba(245,158,11,0.1);color:var(--alert-amber);">Breaking</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ OVERLAY: Charts Dashboard ═══ -->
+<div class="overlay-view" id="view-charts">
+  <div class="overlay-header">
+    <div class="overlay-title-group">
+      <h1>📊 Charts</h1>
+      <p>Fleet analytics & crew performance metrics</p>
+    </div>
+    <button class="overlay-close" onclick="closeOverlay()">✕</button>
+  </div>
+  <div class="overlay-body">
+    <div class="charts-grid">
+
+      <!-- Shipping Velocity -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">📈 Shipping Velocity</span>
+          <span class="chart-card-value" style="color:var(--sea-green)">47</span>
+        </div>
+        <div class="chart-card-subtitle">files shipped this week</div>
+        <div class="mini-bars">
+          <div class="mini-bar bar-green" style="height:35%"></div>
+          <div class="mini-bar bar-green" style="height:55%"></div>
+          <div class="mini-bar bar-green" style="height:40%"></div>
+          <div class="mini-bar bar-green" style="height:80%"></div>
+          <div class="mini-bar bar-green" style="height:65%"></div>
+          <div class="mini-bar bar-green" style="height:90%"></div>
+          <div class="mini-bar bar-green" style="height:70%"></div>
+          <div class="mini-bar" style="height:45%;background:linear-gradient(180deg,var(--bridge-glow),rgba(56,189,248,0.2));opacity:0.6"></div>
+        </div>
+      </div>
+
+      <!-- Fleet Health -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">🏥 Fleet Health</span>
+          <span class="chart-card-value" style="color:var(--sea-green)">94%</span>
+        </div>
+        <div class="chart-card-subtitle">average across 5 vessels</div>
+        <div class="health-gauge">
+          <div class="gauge-ring">A</div>
+          <div class="gauge-labels">
+            <div class="gauge-label"><span class="gauge-label-name">web-dev-cody</span><span class="gauge-label-val" style="color:var(--sea-green)">98%</span></div>
+            <div class="gauge-label"><span class="gauge-label-name">auth-service</span><span class="gauge-label-val" style="color:var(--sea-green)">96%</span></div>
+            <div class="gauge-label"><span class="gauge-label-name">mobile-app</span><span class="gauge-label-val" style="color:var(--alert-amber)">78%</span></div>
+            <div class="gauge-label"><span class="gauge-label-name">infra</span><span class="gauge-label-val" style="color:var(--sea-green)">99%</span></div>
+            <div class="gauge-label"><span class="gauge-label-name">design-system</span><span class="gauge-label-val" style="color:var(--sea-green)">95%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Performance -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">👥 Crew Reports</span>
+        </div>
+        <div class="agent-row">
+          <span class="agent-row-name" style="color:var(--crew-purple)">Claude Code</span>
+          <div class="agent-row-bar"><div class="agent-row-fill" style="width:87%;background:linear-gradient(90deg,var(--crew-purple),rgba(167,139,250,0.3))"></div></div>
+          <span class="agent-row-val">87%</span>
+        </div>
+        <div class="agent-row">
+          <span class="agent-row-name" style="color:var(--cargo-blue)">Codex</span>
+          <div class="agent-row-bar"><div class="agent-row-fill" style="width:72%;background:linear-gradient(90deg,var(--cargo-blue),rgba(96,165,250,0.3))"></div></div>
+          <span class="agent-row-val">72%</span>
+        </div>
+        <div class="agent-row" style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--bridge-border)">
+          <span class="agent-row-name" style="color:var(--text-dim);font-size:10px;">Accept Rate</span>
+          <div class="agent-row-bar"><div class="agent-row-fill" style="width:91%;background:var(--sea-green)"></div></div>
+          <span class="agent-row-val" style="color:var(--sea-green)">91%</span>
+        </div>
+        <div class="agent-row">
+          <span class="agent-row-name" style="color:var(--text-dim);font-size:10px;">Avg Tokens</span>
+          <div class="agent-row-bar"><div class="agent-row-fill" style="width:64%;background:var(--alert-amber)"></div></div>
+          <span class="agent-row-val" style="color:var(--alert-amber)">12.4k</span>
+        </div>
+        <div class="agent-row">
+          <span class="agent-row-name" style="color:var(--text-dim);font-size:10px;">Time→Ship</span>
+          <div class="agent-row-bar"><div class="agent-row-fill" style="width:43%;background:var(--bridge-glow)"></div></div>
+          <span class="agent-row-val" style="color:var(--bridge-glow)">4.2m</span>
+        </div>
+      </div>
+
+      <!-- Resource Usage -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">⚡ Resource Usage</span>
+          <span class="chart-card-value" style="color:var(--bridge-glow)">2.1 GB</span>
+        </div>
+        <div class="chart-card-subtitle">memory across all agent processes</div>
+        <div class="mini-bars">
+          <div class="mini-bar bar-purple" style="height:75%" title="Claude Code: 820MB"></div>
+          <div class="mini-bar bar-amber" style="height:35%" title="Node dev server: 380MB"></div>
+          <div class="mini-bar bar-green" style="height:20%" title="Vite: 210MB"></div>
+          <div class="mini-bar" style="height:55%;background:linear-gradient(180deg,var(--alert-red),rgba(248,113,113,0.2))" title="Rust backend: 520MB"></div>
+          <div class="mini-bar" style="height:15%;background:var(--text-faint)" title="Other: 140MB"></div>
+        </div>
+      </div>
+
+      <!-- Activity Heatmap -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">🔥 Activity (Last 7 Days)</span>
+        </div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:8px;">
+          <div style="width:28px;height:28px;border-radius:4px;background:rgba(52,211,153,0.15)" title="Mon: 8 ships"></div>
+          <div style="width:28px;height:28px;border-radius:4px;background:rgba(52,211,153,0.3)" title="Tue: 12 ships"></div>
+          <div style="width:28px;height:28px;border-radius:4px;background:rgba(52,211,153,0.5)" title="Wed: 18 ships"></div>
+          <div style="width:28px;height:28px;border-radius:4px;background:rgba(52,211,153,0.25)" title="Thu: 10 ships"></div>
+          <div style="width:28px;height:28px;border-radius:4px;background:rgba(52,211,153,0.7)" title="Fri: 22 ships"></div>
+          <div style="width:28px;height:28px;border-radius:4px;background:rgba(52,211,153,0.15)" title="Sat: 6 ships"></div>
+          <div style="width:28px;height:28px;border-radius:4px;background:rgba(52,211,153,0.4);border:1px solid var(--bridge-glow)" title="Sun: 14 ships (today)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:9px;color:var(--text-faint);font-family:var(--font-mono)">
+          <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+        </div>
+      </div>
+
+      <!-- Token Spend -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">💰 Token Spend (This Week)</span>
+          <span class="chart-card-value" style="color:var(--brass)">$4.82</span>
+        </div>
+        <div class="chart-card-subtitle">across all agents and vessels</div>
+        <div class="mini-bars">
+          <div class="mini-bar bar-purple" style="height:50%"></div>
+          <div class="mini-bar bar-purple" style="height:65%"></div>
+          <div class="mini-bar bar-purple" style="height:45%"></div>
+          <div class="mini-bar bar-purple" style="height:80%"></div>
+          <div class="mini-bar bar-purple" style="height:95%"></div>
+          <div class="mini-bar bar-purple" style="height:30%"></div>
+          <div class="mini-bar" style="height:55%;background:linear-gradient(180deg,var(--brass),rgba(251,191,36,0.2));opacity:0.8"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ OVERLAY: Dry Dock (Plugins) ═══ -->
+<div class="overlay-view" id="view-plugins">
+  <div class="overlay-header">
+    <div class="overlay-title-group">
+      <h1>🔌 Dry Dock</h1>
+      <p>Browse, install, and manage plugins for your Bridge</p>
+    </div>
+    <button class="overlay-close" onclick="closeOverlay()">✕</button>
+  </div>
+  <div class="overlay-body">
+    <div class="charts-grid">
+      <div class="chart-card" style="cursor:pointer;" onclick="this.style.borderColor='var(--sea-green)'">
+        <div class="chart-card-header">
+          <span class="chart-card-title">📊 Linear Sync</span>
+          <span style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(52,211,153,0.1);color:var(--sea-green);font-weight:600;font-family:var(--font-mono)">INSTALLED</span>
+        </div>
+        <div class="journal-body" style="margin-top:8px">Sync ship events with Linear tickets. Auto-create tickets from agent sessions, update statuses on sail.</div>
+        <div class="journal-tags" style="margin-top:12px">
+          <span class="journal-tag" style="background:rgba(96,165,250,0.1);color:var(--cargo-blue)">Integration</span>
+          <span class="journal-tag" style="background:rgba(100,116,139,0.1);color:var(--text-dim)">v1.2.0</span>
+        </div>
+      </div>
+
+      <div class="chart-card" style="cursor:pointer;">
+        <div class="chart-card-header">
+          <span class="chart-card-title">💬 Discord Notify</span>
+          <span style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(251,191,36,0.1);color:var(--alert-amber);font-weight:600;font-family:var(--font-mono)">AVAILABLE</span>
+        </div>
+        <div class="journal-body" style="mention-top:8px">Post ship notifications, error alerts, and deployment updates to Discord channels.</div>
+        <div class="journal-tags" style="margin-top:12px">
+          <span class="journal-tag" style="background:rgba(96,165,250,0.1);color:var(--cargo-blue)">Notification</span>
+          <span class="journal-tag" style="background:rgba(100,116,139,0.1);color:var(--text-dim)">v0.8.0</span>
+        </div>
+      </div>
+
+      <div class="chart-card" style="cursor:pointer;">
+        <div class="chart-card-header">
+          <span class="chart-card-title">🚀 Vercel Deploy</span>
+          <span style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(251,191,36,0.1);color:var(--alert-amber);font-weight:600;font-family:var(--font-mono)">AVAILABLE</span>
+        </div>
+        <div class="journal-body" style="margin-top:8px">One-click deploy previews and production from the cargo panel. Monitor deploy status in real-time.</div>
+        <div class="journal-tags" style="margin-top:12px">
+          <span class="journal-tag" style="background:rgba(96,165,250,0.1);color:var(--cargo-blue)">Deploy</span>
+          <span class="journal-tag" style="background:rgba(100,116,139,0.1);color:var(--text-dim)">v1.0.0</span>
+        </div>
+      </div>
+
+      <div class="chart-card" style="cursor:pointer;">
+        <div class="chart-card-header">
+          <span class="chart-card-title">🔐 Vault (Secrets)</span>
+          <span style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(251,191,36,0.1);color:var(--alert-amber);font-weight:600;font-family:var(--font-mono)">AVAILABLE</span>
+        </div>
+        <div class="journal-body" style="margin-top:8px">Secure environment variable management with leak detection. OS keyring integration.</div>
+        <div class="journal-tags" style="margin-top:12px">
+          <span class="journal-tag" style="background:rgba(167,139,250,0.1);color:var(--crew-purple)">Security</span>
+          <span class="journal-tag" style="background:rgba(100,116,139,0.1);color:var(--text-dim)">v0.5.0</span>
+        </div>
+      </div>
+
+      <div class="chart-card" style="cursor:pointer;">
+        <div class="chart-card-header">
+          <span class="chart-card-title">📸 Spyglass (Preview)</span>
+          <span style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(100,116,139,0.1);color:var(--text-faint);font-weight:600;font-family:var(--font-mono)">COMING SOON</span>
+        </div>
+        <div class="journal-body" style="margin-top:8px">Live UI preview of frontend diffs. Render before/after side-by-side directly from cargo manifest.</div>
+        <div class="journal-tags" style="margin-top:12px">
+          <span class="journal-tag" style="background:rgba(52,211,153,0.1);color:var(--sea-green)">Preview</span>
+        </div>
+      </div>
+
+      <div class="chart-card" style="cursor:pointer;border-style:dashed;">
+        <div class="chart-card-header">
+          <span class="chart-card-title">✨ Build Your Own</span>
+        </div>
+        <div class="journal-body" style="margin-top:8px;color:var(--text-dim)">Create custom plugins using the Bridge Plugin SDK. Add new panels, commands, or integrations.</div>
+        <div class="journal-tags" style="margin-top:12px">
+          <span class="journal-tag" style="background:rgba(56,189,248,0.1);color:var(--bridge-glow)">SDK</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ OVERLAY: Helm (Settings) ═══ -->
+<div class="overlay-view" id="view-settings">
+  <div class="overlay-header">
+    <div class="overlay-title-group">
+      <h1>🧰 Helm</h1>
+      <p>Configure your Bridge</p>
+    </div>
+    <button class="overlay-close" onclick="closeOverlay()">✕</button>
+  </div>
+  <div class="overlay-body">
+    <div class="settings-grid">
+      <div class="settings-nav">
+        <div class="settings-nav-item active">🤖 Agents</div>
+        <div class="settings-nav-item">🔗 Git</div>
+        <div class="settings-nav-item">🎨 Appearance</div>
+        <div class="settings-nav-item">🔔 Notifications</div>
+        <div class="settings-nav-item">⌨️ Shortcuts</div>
+        <div class="settings-nav-item">🔐 Security</div>
+        <div class="settings-nav-item">📦 Updates</div>
+      </div>
+      <div class="settings-content">
+        <div class="settings-section">
+          <div class="settings-section-title">🤖 Agent Providers</div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Claude Code</div>
+              <div class="setting-desc">Path to Claude Code CLI binary</div>
+            </div>
+            <input class="setting-input" value="/usr/local/bin/claude" />
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">OpenAI Codex</div>
+              <div class="setting-desc">Path to Codex CLI binary</div>
+            </div>
+            <input class="setting-input" value="/usr/local/bin/codex" />
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Cursor CLI</div>
+              <div class="setting-desc">Path to Cursor CLI binary</div>
+            </div>
+            <input class="setting-input" value="/usr/local/bin/cursor" />
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">🧠 AI Features</div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Cargo Scanner (AI Diff Summary)</div>
+              <div class="setting-desc">Use AI to summarize and assess risk of diffs before review</div>
+            </div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Helm Orders (Intent-Based Launch)</div>
+              <div class="setting-desc">Parse natural language intent to select agent and craft prompt</div>
+            </div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Inspection Bay (Risk-Gated Sail)</div>
+              <div class="setting-desc">Pre-commit checks for secrets, console.logs, test coverage</div>
+            </div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Night Watch (Scheduled Runs)</div>
+              <div class="setting-desc">Cron-like scheduler for automated agent tasks</div>
+            </div>
+            <div class="toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">🎨 Theme</div>
+          <div class="theme-swatches">
+            <div class="theme-swatch swatch-dark active" onclick="selectTheme(this)"></div>
+            <div class="theme-swatch swatch-midnight" onclick="selectTheme(this)"></div>
+            <div class="theme-swatch swatch-radar" onclick="selectTheme(this)"></div>
+            <div class="theme-swatch swatch-arctic" onclick="selectTheme(this)"></div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">📋 Commit Style</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Conventional Commits</div>
+              <div class="setting-desc">Auto-format commit messages as conventional commits</div>
+            </div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Auto-changelog</div>
+              <div class="setting-desc">Generate CHANGELOG.md entries on every sail</div>
+            </div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Vessel Selection ──
+function selectVessel(card, name) {
+  document.querySelectorAll('.vessel-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  document.getElementById('vesselTitle').textContent = name;
+  document.getElementById('vesselPath').textContent = '~/Projects/' + name;
+}
+
+// ── Tab Switching ──
+function switchTab(btn, tabId) {
+  document.querySelectorAll('.vessel-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-crew').style.display = 'none';
+  document.getElementById('tab-log').classList.remove('visible');
+  document.getElementById('tab-engine').classList.remove('visible');
+  if (tabId === 'crew') document.getElementById('tab-crew').style.display = '';
+  if (tabId === 'log') document.getElementById('tab-log').classList.add('visible');
+  if (tabId === 'engine') document.getElementById('tab-engine').classList.add('visible');
+}
+
+// Initialize tab visibility
+document.getElementById('tab-crew').style.display = '';
+
+// ── Diff Detail Toggle ──
+function toggleDiffDetail(fileEl) {
+  const detail = fileEl.nextElementSibling;
+  if (detail && detail.classList.contains('diff-detail')) {
+    const isVisible = detail.classList.contains('visible');
+    document.querySelectorAll('.diff-detail.visible').forEach(d => d.classList.remove('visible'));
+    if (!isVisible) detail.classList.add('visible');
+  }
+}
+
+// ── Set Sail Animation ──
+function setSail() {
+  const btn = document.querySelector('.sail-btn');
+  btn.innerHTML = '<span>⚵</span> Sailing...';
+  btn.style.background = 'linear-gradient(135deg, #41B0E0, #2E9EBC)';
+  btn.style.pointerEvents = 'none';
+  setTimeout(() => {
+    btn.innerHTML = '<span>✅</span> Sailed — 3 files pushed to main';
+    btn.style.background = 'linear-gradient(135deg, #A9DD76, #7DBA5C)';
+    setTimeout(() => {
+      btn.innerHTML = '<span>⚓</span> Set Sail — Commit & Push';
+      btn.style.background = '';
+      btn.style.pointerEvents = '';
+    }, 2800);
+  }, 1600);
+}
+
+// ── Overlay Views ──
+function showOverlay(viewId) {
+  // Update nav
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  // Hide all overlays
+  document.querySelectorAll('.overlay-view').forEach(o => o.classList.remove('visible'));
+
+  if (viewId) {
+    document.getElementById('view-' + viewId).classList.add('visible');
+    document.querySelector('.bridge-wrapper').style.display = 'none';
+  } else {
+    document.querySelector('.bridge-wrapper').style.display = '';
+  }
+}
+
+function closeOverlay() {
+  document.querySelectorAll('.overlay-view').forEach(o => o.classList.remove('visible'));
+  document.querySelector('.bridge-wrapper').style.display = '';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector('.nav-item').classList.add('active');
+}
+
+// ── Theme Selection ──
+function selectTheme(swatch) {
+  document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+  swatch.classList.add('active');
+}
+
+// ── Animate bars on charts view open ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.querySelectorAll('.agent-row-fill').forEach(fill => {
+        const w = fill.style.width;
+        fill.style.width = '0%';
+        requestAnimationFrame(() => { fill.style.width = w; });
+      });
+    }
+  });
+});
+document.querySelectorAll('.chart-card').forEach(card => observer.observe(card));
+
+// ── Console Easter Egg ──
+console.log(
+  '%c⚓ Bridge v0.1.0  —  Command Your Fleet\n%chttps://github.com/your-org/bridge',
+  'color:#38bdf8;font-weight:bold;font-size:16px;',
+  'color:#64748b;font-size:11px;'
+);
+</script>
+
+</body>
+</html>
