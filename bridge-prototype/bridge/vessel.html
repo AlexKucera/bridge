@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bridge — Vessel Detail</title>
+<link rel="stylesheet" href="styles/bridge.css" />
+<script src="js/theme.js"></script>
+<style>
+  /* ---- Page grid ---- */
+  .app {
+    display: grid;
+    grid-template-rows: 32px 1fr 48px;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--abyss);
+  }
+
+  /* ---- Hero ---- */
+  .hero {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--sp-2xl);
+    padding: var(--sp-xl) var(--sp-3xl);
+    border-bottom: 1px solid var(--border-base);
+    background: var(--panel);
+  }
+  .hero__icon {
+    width: 56px; height: 56px;
+    border-radius: var(--r-lg);
+    background: var(--deep);
+    border: 1px solid var(--border-raised);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 18px; font-weight: 700;
+    color: var(--glow);
+    letter-spacing: -0.5px;
+  }
+  .hero__info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .hero__top { display: flex; align-items: baseline; gap: var(--sp-lg); flex-wrap: wrap; }
+  .hero__name { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.4px; color: var(--foam); }
+  .hero__branch {
+    font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+    background: var(--deep); border: 1px solid var(--border-base);
+    padding: 2px 10px; border-radius: 99px;
+  }
+  .hero__branch::before { content: '⌥ '; color: var(--dim); }
+  .hero__path {
+    font-family: var(--font-mono); font-size: 11.5px; color: var(--dim);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .hero__path svg { color: var(--faint); flex-shrink: 0; }
+  .hero__stats { display: flex; gap: var(--sp-xl); margin-top: 4px; }
+  .hero__stat { display: flex; flex-direction: column; gap: 1px; }
+  .hero__stat .l { font-size: 9.5px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--dim); }
+  .hero__stat .v { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--foam); }
+  .hero__actions { display: flex; gap: var(--sp-sm); align-items: center; }
+
+  /* ---- Tabs ---- */
+  .vtabs {
+    display: flex; align-items: center; gap: 1px;
+    padding: 0 var(--sp-xl);
+    background: var(--abyss);
+    border-bottom: 1px solid var(--border-base);
+    overflow-x: auto;
+  }
+  .vtab {
+    background: none; border: none;
+    padding: var(--sp-md) var(--sp-lg);
+    font-family: var(--font-sans); font-size: 12px; font-weight: 500;
+    color: var(--muted); cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color var(--t-fast), border-color var(--t-fast);
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .vtab:hover { color: var(--foam); }
+  .vtab[aria-selected="true"] { color: var(--glow); border-bottom-color: var(--glow); }
+  .vtab .badge { margin-left: 2px; }
+
+  /* ---- Content area ---- */
+  .vbody { overflow: auto; min-height: 0; background: var(--abyss); }
+
+  /* ===== OVERVIEW TAB ===== */
+  .overview { padding: var(--sp-2xl); display: flex; flex-direction: column; gap: var(--sp-2xl); }
+  .overview__row { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-lg); }
+  .ocard {
+    background: var(--surface); border: 1px solid var(--border-base);
+    border-radius: var(--r-md); padding: var(--sp-lg);
+    display: flex; flex-direction: column; gap: var(--sp-sm);
+  }
+  .ocard__label { font-size: 9.5px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--dim); }
+  .ocard__value { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--foam); }
+  .ocard__sub { font-size: 11px; color: var(--muted); }
+  .ocard__spark { height: 32px; margin-top: auto; }
+
+  /* Mini chart in overview card */
+  .mini-bar { display: flex; align-items: flex-end; gap: 2px; height: 100%; }
+  .mini-bar .bar { flex: 1; background: var(--glow-dim); border-radius: 2px; min-width: 3px; transition: height var(--t-fast); }
+  .mini-bar .bar:hover { background: var(--glow); }
+
+  /* Recent sessions list */
+  .osection h3 { margin: 0 0 var(--sp-md); font-size: 14px; font-weight: 600; color: var(--foam); display: flex; align-items: center; justify-content: space-between; }
+  .osection h3 .btn--sm { font-size: 10px; }
+
+  .session-row {
+    display: grid; grid-template-columns: auto 1fr auto auto auto auto;
+    align-items: center; gap: var(--sp-lg);
+    padding: var(--sp-md) var(--sp-lg);
+    border-bottom: 1px solid var(--border-base);
+    transition: background var(--t-fast);
+    cursor: default;
+  }
+  .session-row:hover { background: var(--surface); }
+  .session-row .dot { flex-shrink: 0; }
+  .session-id { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--glow); }
+  .session-meta { font-size: 11px; color: var(--muted); }
+  .session-cost { font-family: var(--font-mono); font-size: 12px; color: var(--brass); text-align: right; }
+  .session-time { font-family: var(--font-mono); font-size: 11px; color: var(--dim); text-align: right; }
+  .session-date { font-size: 11px; color: var(--faint); text-align: right; }
+
+  /* ===== SESSIONS TAB ===== */
+  .sessions { padding: var(--sp-2xl); display: flex; flex-direction: column; gap: var(--sp-xl); }
+  .sessions__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-xl); }
+  .sessions__filters { display: flex; gap: var(--sp-sm); }
+  .pill {
+    font-family: var(--font-sans); font-size: 11px;
+    padding: 4px 12px; border-radius: 99px;
+    border: 1px solid var(--border-base); background: transparent;
+    color: var(--muted); cursor: pointer; transition: all var(--t-fast);
+  }
+  .pill:hover { border-color: var(--border-raised); color: var(--foam); }
+  .pill.active { background: var(--glow); color: var(--abyss); border-color: var(--glow); font-weight: 600; }
+
+  .sess-card {
+    background: var(--surface); border: 1px solid var(--border-base);
+    border-radius: var(--r-md); overflow: hidden;
+  }
+  .sess-card__head {
+    display: flex; align-items: center; gap: var(--sp-lg);
+    padding: var(--sp-md) var(--sp-lg);
+    border-bottom: 1px solid var(--border-base);
+    background: var(--panel);
+  }
+  .sess-card__body { padding: var(--sp-lg); }
+
+  .turn-list { display: flex; flex-direction: column; gap: var(--sp-md); }
+  .s-turn {
+    display: grid; grid-template-columns: 28px 1fr auto;
+    gap: var(--sp-md); align-items: start;
+    padding: var(--sp-md) 0;
+    border-bottom: 1px solid var(--border-base);
+  }
+  .s-turn:last-child { border-bottom: none; }
+  .s-bullet {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0;
+  }
+  .s-bullet--user   { background: color-mix(in oklch, var(--sea-green) 20%, transparent); color: var(--sea-green); }
+  .s-bullet--pi     { background: color-mix(in oklch, var(--glow) 20%, transparent); color: var(--glow); }
+  .s-bullet--tool   { background: color-mix(in oklch, var(--cargo-blue) 20%, transparent); color: var(--cargo-blue); }
+  .s-bullet--err    { background: color-mix(in oklch, var(--alert-red) 20%, transparent); color: var(--alert-red); }
+  .s-content { min-width: 0; }
+  .s-role { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--dim); margin-bottom: 2px; }
+  .s-msg { font-size: 12.5px; color: var(--foam); line-height: 1.5; }
+  .s-meta { font-family: var(--font-mono); font-size: 10px; color: var(--faint); margin-top: 4px; }
+  .s-time { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); white-space: nowrap; }
+
+  /* ===== CARGO TAB ===== */
+  .cargo-view { padding: var(--sp-2xl); display: flex; flex-direction: column; gap: var(--sp-xl); }
+  .cargo-header { display: flex; align-items: center; justify-content: space-between; }
+  .cargo-branch { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+  .cv-filelist { display: flex; flex-direction: column; }
+  .cv-file {
+    display: grid; grid-template-columns: auto 1fr auto auto;
+    align-items: center; gap: var(--sp-lg);
+    padding: var(--sp-md) var(--sp-lg);
+    border-bottom: 1px solid var(--border-base);
+    cursor: pointer; transition: background var(--t-fast);
+  }
+  .cv-file:hover { background: var(--surface); }
+  .cv-file[aria-current="true"] { background: color-mix(in oklch, var(--glow) 6%, transparent); }
+  .cv-icon { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .cv-icon.add { background: color-mix(in oklch, var(--sea-green) 15%, transparent); color: var(--sea-green); }
+  .cv-icon.mod { background: color-mix(in oklch, var(--brass) 15%, transparent); color: var(--brass); }
+  .cv-icon.del { background: color-mix(in oklch, var(--alert-red) 15%, transparent); color: var(--alert-red); }
+  .cv-path { font-family: var(--font-mono); font-size: 12px; color: var(--foam); }
+  .cv-path .dir { color: var(--muted); }
+  .cv-stats { font-family: var(--font-mono); font-size: 11px; }
+  .cv-stats .plus { color: var(--sea-green); }
+  .cv-stats .minus { color: var(--alert-red); }
+  .cv-action { opacity: 0; transition: opacity var(--t-fast); }
+  .cv-file:hover .cv-action { opacity: 1; }
+
+  .diff-panel {
+    background: var(--deep); border: 1px solid var(--border-base);
+    border-radius: var(--r-md); overflow: hidden;
+  }
+  .diff-panel pre {
+    margin: 0; padding: var(--sp-lg);
+    font-family: var(--font-mono); font-size: 11.5px; line-height: 1.65;
+    color: var(--muted); overflow-x: auto;
+  }
+
+  /* ===== ENGINE TAB ===== */
+  .engine-view { padding: var(--sp-2xl); display: flex; flex-direction: column; gap: var(--sp-lg); }
+  .ecard {
+    background: var(--surface); border: 1px solid var(--border-base);
+    border-radius: var(--r-md); padding: var(--sp-lg);
+    display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-lg); align-items: center;
+  }
+  .ecard__status { display: flex; align-items: center; gap: var(--sp-sm); font-size: 12px; font-weight: 600; }
+  .ecard__cmd { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+  .ecard__meta { display: flex; gap: var(--sp-xl); font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+  .ecard__meta b { color: var(--foam); font-weight: 600; }
+  .ecard__progress { grid-column: 1 / -1; margin-top: var(--sp-sm); }
+  .progress-bar { height: 4px; background: var(--mid); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--glow); border-radius: 2px; transition: width var(--t-smooth); }
+  .progress-fill.warn { background: var(--brass); }
+  .progress-fill.err { background: var(--alert-red); }
+
+  /* ===== CONFIG TAB ===== */
+  .config-view { padding: var(--sp-2xl); display: flex; flex-direction: column; gap: var(--sp-2xl); max-width: 720px; }
+  .cfg-section { display: flex; flex-direction: column; gap: var(--sp-lg); }
+  .cfg-section h3 { margin: 0; font-size: 13px; font-weight: 700; color: var(--foam); letter-spacing: -0.2px; }
+  .cfg-row { display: grid; grid-template-columns: 140px 1fr; gap: var(--sp-xl); align-items: center; }
+  .cfg-label { font-size: 12px; color: var(--muted); }
+  .cfg-input {
+    background: var(--deep); border: 1px solid var(--border-base);
+    border-radius: var(--r-sm); padding: 7px 12px;
+    font-family: var(--font-mono); font-size: 12px; color: var(--foam);
+    outline: none; transition: border-color var(--t-fast);
+    width: 100%;
+  }
+  .cfg-input:focus { border-color: var(--glow); }
+  .cfg-input::placeholder { color: var(--faint); }
+  select.cfg-input { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+  .cfg-help { font-size: 11px; color: var(--faint); margin-top: 2px; }
+  .cfg-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cfg-tag {
+    font-family: var(--font-mono); font-size: 11px; padding: 3px 10px;
+    border-radius: 99px; background: var(--deep); border: 1px solid var(--border-base);
+    color: var(--muted); display: flex; align-items: center; gap: 6px;
+  }
+  .cfg-tag .rm { cursor: pointer; color: var(--faint); font-size: 14px; line-height: 1; }
+  .cfg-tag .rm:hover { color: var(--alert-red); }
+  .cfg-add { font-size: 11px; color: var(--glow); cursor: pointer; border: none; background: none; padding: 3px 8px; }
+  .cfg-add:hover { text-decoration: underline; }
+
+  .cfg-danger { border-color: color-mix(in oklch, var(--alert-red) 30%, transparent); }
+  .cfg-danger:focus { border-color: var(--alert-red); }
+
+  /* ---- Back link ---- */
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--muted); text-decoration: none;
+    margin-bottom: var(--sp-lg); transition: color var(--t-fast);
+  }
+  .back-link:hover { color: var(--glow); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ========== TITLE BAR ========== -->
+  <header class="titlebar">
+    <div class="tb-left">
+      <a href="dashboard.html" class="back-link" style="margin-bottom:0;color:var(--muted);font-size:11px;">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><path d="M10 12L6 8l4-4"/></svg>
+        Fleet
+      </a>
+      <span style="color:var(--border-base);margin:0 4px;">|</span>
+      <span class="tb-title"><b id="vb-name">bridge</b> — Vessel</span>
+    </div>
+    <div class="tb-title">
+      <span class="tb-pill" id="vb-status-pill"><span class="dot dot--green pulse"></span> Running</span>
+    </div>
+    <div class="tb-right">
+      <span class="tb-title">⌘K · Helm</span>
+    </div>
+  </header>
+
+  <!-- ========== HERO ========== -->
+  <div class="hero" id="hero">
+    <div class="hero__icon" id="vb-icon">BR</div>
+    <div class="hero__info">
+      <div class="hero__top">
+        <h1 class="hero__name" id="vb-fullname">bridge</h1>
+        <span class="hero__branch" id="vb-branch">main</span>
+      </div>
+      <div class="hero__path">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><path d="M2 11V5l5-3 5 3v6"/><path d="M6 11V8h2v3"/></svg>
+        <span id="vb-path">/Users/alex/code/bridge</span>
+      </div>
+      <div class="hero__stats">
+        <div class="hero__stat"><span class="l">Sessions (7d)</span><span class="v" id="vb-sessions">23</span></div>
+        <div class="hero__stat"><span class="l">Total cost</span><span class="v" id="vb-cost">$12.84</span></div>
+        <div class="hero__stat"><span class="l">Uptime today</span><span class="v" id="vb-uptime">4h 32m</span></div>
+        <div class="hero__stat"><span class="l">Last active</span><span class="v" id="vb-last">2 min ago</span></div>
+      </div>
+    </div>
+    <div class="hero__actions">
+      <button class="btn btn--icon" title="Pause crew">
+        <svg class="ico" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="3" width="3" height="10" rx="1"/><rect x="9" y="3" width="3" height="10" rx="1"/></svg>
+      </button>
+      <button class="btn btn--secondary btn--sm">＋ Launch Pi</button>
+      <a href="helm.html" class="btn btn--ghost btn--sm">Settings ↗</a>
+    </div>
+  </div>
+
+  <!-- ========== TABS ========== -->
+  <nav class="vtabs" role="tablist">
+    <button class="vtab" role="tab" aria-selected="true" data-vtab="overview">Overview</button>
+    <button class="vtab" role="tab" aria-selected="false" data-vtab="sessions">Sessions <span class="badge badge--crew" style="background:transparent;border:0;padding:0;color:var(--crew-purple);">23</span></button>
+    <button class="vtab" role="tab" aria-selected="false" data-vtab="cargo">Cargo <span class="badge badge--warn" style="background:transparent;border:0;padding:0;color:var(--brass);">3</span></button>
+    <button class="vtab" role="tab" aria-selected="false" data-vtab="engine">Engine Room</button>
+    <button class="vtab" role="tab" aria-selected="false" data-vtab="config">Config</button>
+  </nav>
+
+  <!-- ========== BODY ========== -->
+  <div class="vbody">
+
+    <!-- ===== OVERVIEW ===== -->
+    <div class="pane active" id="vpane-overview">
+      <div class="overview">
+
+        <!-- Stat cards -->
+        <div class="overview__row">
+          <div class="ocard">
+            <span class="ocard__label">Sessions this week</span>
+            <span class="ocard__value">23</span>
+            <span class="ocard__sub">↑ 34% vs last week</span>
+            <div class="ocard__spark"><div class="mini-bar" id="spark-sessions"></div></div>
+          </div>
+          <div class="ocard">
+            <span class="ocard__label">Spend this week</span>
+            <span class="ocard__value">$12.84</span>
+            <span class="ocard__sub">avg $0.56 / session</span>
+            <div class="ocard__spark"><div class="mini-bar" id="spark-cost"></div></div>
+          </div>
+          <div class="ocard">
+            <span class="ocard__label">Tokens (in / out)</span>
+            <span class="ocard__value">892K<span style="font-size:14px;color:var(--dim)"> / </span>241K</span>
+            <span class="ocard__sub">3.7:1 compression ratio</span>
+          </div>
+          <div class="ocard">
+            <span class="ocard__label">Top skill</span>
+            <span class="ocard__value" style="font-size:16px;">/a11y-audit</span>
+            <span class="ocard__sub">used 8 times this week</span>
+          </div>
+        </div>
+
+        <!-- Recent sessions -->
+        <div class="osection">
+          <h3>
+            Recent sessions
+            <a href="dashboard.html" class="btn btn--ghost btn--sm">View all in Fleet →</a>
+          </h3>
+          <div id="recent-list"></div>
+        </div>
+
+        <!-- Activity heatmap placeholder -->
+        <div class="osection">
+          <h3>Activity this week</h3>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">
+            <div style="text-align:center;font-size:9px;color:var(--faint);font-family:var(--font-mono);padding-bottom:4px;">Mon</div>
+            <div style="text-align:center;font-size:9px;color:var(--faint);font-family:var(--font-mono);padding-bottom:4px;">Tue</div>
+            <div style="text-align:center;font-size:9px;color:var(--faint);font-family:var(--font-mono);padding-bottom:4px;">Wed</div>
+            <div style="text-align:center;font-size:9px;color:var(--faint);font-family:var(--font-mono);padding-bottom:4px;">Thu</div>
+            <div style="text-align:center;font-size:9px;color:var(--faint);font-family:var(--font-mono);padding-bottom:4px;">Fri</div>
+            <div style="text-align:center;font-size:9px;color:var(--faint);font-family:var(--font-mono);padding-bottom:4px;">Sat</div>
+            <div style="text-align:center;font-size:9px;color:var(--faint);font-family:var(--font-mono);padding-bottom:4px;">Sun</div>
+          </div>
+          <div id="heatmap" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== SESSIONS ===== -->
+    <div class="pane" id="vpane-sessions" style="display:none;flex-direction:column;">
+      <div class="sessions">
+        <div class="sessions__head">
+          <div class="sessions__filters">
+            <button class="pill active">All</button>
+            <button class="pill">Success</button>
+            <button class="pill">Error</button>
+            <button class="pill">Cancelled</button>
+          </div>
+          <span class="t-tiny text-faint mono">23 sessions · $12.84 total</span>
+        </div>
+
+        <!-- Active session -->
+        <div class="sess-card">
+          <div class="sess-card__head">
+            <span class="dot dot--cyan pulse"></span>
+            <b style="font-size:12px;">Active session</b>
+            <span class="mono text-muted" style="margin-left:auto;font-size:11px;">b4f9-7a21 · 12m 04s elapsed</span>
+          </div>
+          <div class="sess-card__body">
+            <div class="turn-list">
+              <div class="s-turn">
+                <div class="s-bullet s-bullet--user">C</div>
+                <div class="s-content">
+                  <div class="s-role">Captain · turn 01</div>
+                  <div class="s-msg">/skill a11y-audit — audit Panel + Sidebar for WCAG 2.1 AA contrast and missing aria-labels. Edit in place, leave a short note in CHANGELOG.</div>
+                </div>
+                <span class="s-time">14:20:11</span>
+              </div>
+              <div class="s-turn">
+                <div class="s-bullet s-bullet--pi">π</div>
+                <div class="s-content">
+                  <div class="s-role">Pi · thinking</div>
+                  <div class="s-msg">I'll start by reading the Panel and Sidebar components, then grep for existing aria attributes to find gaps. Contrast checks need the design tokens — I'll pull them from <span class="mono" style="color:var(--cargo-blue);">styles/tokens.css</span>.</div>
+                </div>
+                <span class="s-time">14:20:14</span>
+              </div>
+              <div class="s-turn">
+                <div class="s-bullet s-bullet--tool">T</div>
+                <div class="s-content">
+                  <div class="s-role">Pi · tool runs · 4</div>
+                  <div class="s-msg" style="color:var(--muted);">
+                    read src/components/Panel.tsx · 142 lines &nbsp;<span class="dot dot--green" style="display:inline-block;margin-right:4px;"></span>OK 38ms<br/>
+                    read src/components/Sidebar.tsx · 211 lines &nbsp;<span class="dot dot--green" style="display:inline-block;margin-right:4px;"></span>OK 42ms<br/>
+                    grep "role=" src/ — 18 matches across 12 files &nbsp;<span class="dot dot--green" style="display:inline-block;margin-right:4px;"></span>OK 156ms<br/>
+                    read styles/tokens.css · 78 lines &nbsp;<span class="dot dot--green" style="display:inline-block;margin-right:4px;"></span>OK 21ms
+                  </div>
+                </div>
+                <span class="s-time">14:20:18</span>
+              </div>
+              <div class="s-turn">
+                <div class="s-bullet s-bullet--pi">π</div>
+                <div class="s-content">
+                  <div class="s-role">Pi · response</div>
+                  <div class="s-msg">Four issues to fix: Panel header is missing <span class="mono" style="color:var(--cargo-blue);">aria-label</span> on the action button row; Sidebar uses <span class="mono" style="color:var(--cargo-blue);">role="navigation"</span> without a label; the muted-on-deep combo measures <b style="color:var(--brass)">4.31:1</b> (below 4.5:1 AA); and the badge-pulse animation lacks a reduced-motion fallback. Editing now.</div>
+                </div>
+                <span class="s-time">14:21:02</span>
+              </div>
+              <div class="s-turn">
+                <div class="s-bullet s-bullet--tool">T</div>
+                <div class="s-content">
+                  <div class="s-role">Pi · running tool · in flight</div>
+                  <div class="s-msg" style="color:var(--glow);">edit src/components/Panel.tsx — add aria-label to actions, bump --muted contrast <span class="dot dot--cyan pulse" style="display:inline-block;margin-right:4px;"></span>RUNNING</div>
+                </div>
+                <span class="s-time">14:31:48</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Past sessions -->
+        <div class="sess-card">
+          <div class="sess-card__head">
+            <span class="dot dot--green"></span>
+            <b style="font-size:12px;">aa12-19c4</b>
+            <span class="mono text-muted" style="margin-left:auto;font-size:11px;">success · $0.18 · 8m 22s · Today 13:47</span>
+          </div>
+          <div class="sess-card__body">
+            <div class="turn-list">
+              <div class="s-turn">
+                <div class="s-bullet s-bullet--user">C</div>
+                <div class="s-content">
+                  <div class="s-role">Captain · turn 01</div>
+                  <div class="s-msg">help me draft a PRD for the Captain's Log overlay</div>
+                </div>
+                <span class="s-time">13:47:02</span>
+              </div>
+              <div class="s-turn">
+                <div class="s-bullet s-bullet--pi">π</div>
+                <div class="s-content">
+                  <div class="s-role">Pi · response</div>
+                  <div class="s-msg">Drafted PRD with four sections: data model (events table, indexes), UI layout (filter sidebar + timeline), API design (REST + SSE feed), and retention policy (90-day vacuum). Saved to <span class="mono" style="color:var(--cargo-blue);">docs/prd-captains-log.md</span>.</div>
+                </div>
+                <span class="s-time">13:55:18</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sess-card">
+          <div class="sess-card__head">
+            <span class="dot dot--green"></span>
+            <b style="font-size:12px;">88d3-be01</b>
+            <span class="mono text-muted" style="margin-left:auto;font-size:11px;">success · $0.94 · 23m 11s · Today 11:20</span>
+          </div>
+          <div class="sess-card__body">
+            <div class="turn-list">
+              <div class="s-turn">
+                <div class="s-bullet s-bullet--user">C</div>
+                <div class="s-content">
+                  <div class="s-role">Captain · turn 01</div>
+                  <div class="s-msg">run the full test suite and fix any failures in the auth module</div>
+                </div>
+                <span class="s-time">11:20:33</span>
+              </div>
+              <div class="s-turn">
+                <div class="s-bullet s-bullet--pi">π</div>
+                <div class="s-content">
+                  <div class="s-role">Pi · response</div>
+                  <div class="s-msg">Ran 142 tests, all passing. Found one flaky test in <span class="mono" style="color:var(--cargo-blue);">auth/session.spec.ts</span> — race condition on token refresh. Added proper await + retry logic. All green now.</div>
+                </div>
+                <span class="s-time">11:43:44</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sess-card">
+          <div class="sess-card__head">
+            <span class="dot dot--amber"></span>
+            <b style="font-size:12px;">cf71-a33c</b>
+            <span class="mono text-muted" style="margin-left:auto;font-size:11px;">cancelled · $0.22 · 5m 03s · Today 09:15</span>
+          </div>
+          <div class="sess-card__body">
+            <div class="turn-list">
+              <div class="s-turn">
+                <div class="s-bullet s-bullet--user">C</div>
+                <div class="s-content">
+                  <div class="s-role">Captain · turn 01</div>
+                  <div class="s-msg">refactor the event parser to use serde instead of manual JSON parsing</div>
+                </div>
+                <span class="s-time">09:15:11</span>
+              </div>
+              <div class="s-turn">
+                <div class="s-bullet s-bullet--err">✕</div>
+                <div class="s-content">
+                  <div class="s-role">Cancelled by captain</div>
+                  <div class="s-msg" style="color:var(--faint);">Session interrupted after 3 turns — changed approach mid-stream.</div>
+                </div>
+                <span class="s-time">09:20:14</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== CARGO ===== -->
+    <div class="pane" id="vpane-cargo" style="display:none;flex-direction:column;">
+      <div class="cargo-view">
+        <div class="cargo-header">
+          <div>
+            <h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foam);">Pending shipment</h3>
+            <span class="cargo-branch" id="vc-branch">main ← origin/main</span>
+          </div>
+          <div style="display:flex;gap:var(--sp-sm);">
+            <button class="btn btn--ghost btn--sm">Refresh</button>
+            <button class="btn btn--secondary btn--sm">Stage all</button>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="cargo-summary">
+          <div class="cargo-summary__head">
+            <span>Uncommitted changes</span>
+            <span class="mono text-dim" id="vc-filecount">3 files</span>
+          </div>
+          <div class="cargo-summary__stats">
+            <div class="cargo-stat cargo-stat--add">
+              <span class="v num">+47</span><span class="l">added</span>
+            </div>
+            <div class="cargo-stat cargo-stat--mod">
+              <span class="v num">~3</span><span class="l">modified</span>
+            </div>
+            <div class="cargo-stat cargo-stat--del">
+              <span class="v num">−12</span><span class="l">removed</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- File list -->
+        <div class="cv-filelist" id="vc-files">
+          <div class="cv-file" aria-current="true">
+            <span class="cv-icon mod">M</span>
+            <span class="cv-path"><span class="dir">src/components/</span>Panel.tsx</span>
+            <span class="cv-stats"><span class="plus">+24</span> <span class="minus">−8</span></span>
+            <span class="cv-action"><button class="btn btn--ghost btn--sm">Diff</button></span>
+          </div>
+          <div class="cv-file">
+            <span class="cv-icon mod">M</span>
+            <span class="cv-path"><span class="dir">src/components/</span>Sidebar.tsx</span>
+            <span class="cv-stats"><span class="plus">+18</span> <span class="minus">−4</span></span>
+            <span class="cv-action"><button class="btn btn--ghost btn--sm">Diff</button></span>
+          </div>
+          <div class="cv-file">
+            <span class="cv-icon add">A</span>
+            <span class="cv-path">CHANGELOG.md</span>
+            <span class="cv-stats"><span class="plus">+5</span></span>
+            <span class="cv-action"><button class="btn btn--ghost btn--sm">Diff</button></span>
+          </div>
+        </div>
+
+        <!-- Diff viewer -->
+        <div class="diff-panel">
+<pre><span class="lh hdr">@@ -41,9 +41,12 @@ Panel — header actions</span>
+<span class="lh ctx">       &lt;header className="panel__header"&gt;</span>
+<span class="lh del">-        &lt;div className="panel__actions"&gt;</span>
+<span class="lh add">+        &lt;div className="panel__actions" role="toolbar"</span>
+<span class="lh add">+             aria-label={`${title} actions`}&gt;</span>
+<span class="lh ctx">           {actions}</span>
+<span class="lh ctx">         &lt;/div&gt;</span>
+<span class="lh ctx">       &lt;/header&gt;</span>
+<span class="lh hdr">@@ -118,6 +121,9 @@ Token contrast bump</span>
+<span class="lh del">-  --muted: oklch(0.66 0.010 250);</span>
+<span class="lh add">+  --muted: oklch(0.72 0.010 250); /* 4.62:1 vs --deep */</span></pre>
+        </div>
+
+        <!-- Commit form -->
+        <form class="commit-form" onsubmit="return false;">
+          <label class="t-label" style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span>Commit message</span>
+            <button type="button" class="btn btn--ghost btn--sm" style="padding:2px 6px;font-size:10px;">↻ Auto-generate</button>
+          </label>
+          <textarea>feat(a11y): add aria-labels to Panel and Sidebar; bump --muted contrast
+
+- Panel: role="toolbar" + aria-label on action group
+- Sidebar: aria-label on &lt;nav&gt;; remove duplicate role
+- tokens: --muted now 4.62:1 against --deep (was 4.31:1)
+- changelog entry</textarea>
+          <div class="row" style="font-size:11px;color:var(--dim);margin-top:4px;">
+            <span class="mono">conventional · 4 lines · 312 chars</span>
+            <span style="margin-left:auto;" class="mono"><span class="dot dot--green" style="display:inline-block;margin-right:4px;"></span>no conflicts</span>
+          </div>
+          <div class="row between">
+            <button type="button" class="btn btn--secondary btn--sm">Stage selected</button>
+            <button type="submit" class="btn btn--primary">
+              <svg class="ico" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l4 5v8l-4 2-4 2V6l4-5z"/></svg>
+              Set Sail
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== ENGINE ROOM ===== -->
+    <div class="pane" id="vpane-engine" style="display:none;flex-direction:column;">
+      <div class="engine-view">
+
+        <div class="ecard">
+          <div class="ecard__status"><span class="dot dot--green pulse"></span> RUN</div>
+          <div>
+            <div class="ecard__cmd">pnpm tauri dev</div>
+            <div class="ecard__meta">
+              <span><b>pid</b> 28471</span>
+              <span><b>port</b> 1420</span>
+              <span><b>uptime</b> 1h 12m</span>
+              <span><b>mem</b> 312 MB</span>
+            </div>
+          </div>
+          <button class="btn btn--ghost btn--sm">Stop</button>
+          <div class="ecard__progress">
+            <div class="progress-bar"><div class="progress-fill" style="width:78%;"></div></div>
+          </div>
+        </div>
+
+        <div class="ecard">
+          <div class="ecard__status"><span class="dot dot--green"></span> TEST</div>
+          <div>
+            <div class="ecard__cmd">pnpm test -- --watch</div>
+            <div class="ecard__meta">
+              <span><b>pass</b> 142</span>
+              <span><b>fail</b> 0</span>
+              <span><b>last</b> 12s ago</span>
+            </div>
+          </div>
+          <button class="btn btn--ghost btn--sm">Restart</button>
+        </div>
+
+        <div class="ecard">
+          <div class="ecard__status"><span class="dot dot--amber"></span> BUILD</div>
+          <div>
+            <div class="ecard__cmd">cargo tauri build --target aarch64-apple-darwin</div>
+            <div class="ecard__meta">
+              <span><b>step</b> 12 / 18</span>
+              <span><b>elapsed</b> 4m 21s</span>
+            </div>
+          </div>
+          <button class="btn btn--ghost btn--sm">Logs</button>
+          <div class="ecard__progress">
+            <div class="progress-bar"><div class="progress-fill warn" style="width:67%;"></div></div>
+          </div>
+        </div>
+
+        <div class="ecard">
+          <div class="ecard__status"><span class="dot dot--dim"></span> DEPLOY</div>
+          <div>
+            <div class="ecard__cmd">scripts/notarize-and-publish.sh</div>
+            <div class="ecard__meta">
+              <span><b>last</b> never</span>
+              <span><b>artifact</b> dist/bridge-0.1.0-mac.dmg</span>
+            </div>
+          </div>
+          <button class="btn btn--secondary btn--sm">Run</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== CONFIG ===== -->
+    <div class="pane" id="vpane-config" style="display:none;flex-direction:column;">
+      <div class="config-view">
+
+        <div class="cfg-section">
+          <h3>Identity</h3>
+          <div class="cfg-row">
+            <label class="cfg-label">Display name</label>
+            <input class="cfg-input" value="bridge" />
+          </div>
+          <div class="cfg-row">
+            <label class="cfg-label">Working directory</label>
+            <input class="cfg-input" value="/Users/alex/code/bridge" />
+          </div>
+          <div class="cfg-row">
+            <label class="cfg-label">Default branch</label>
+            <input class="cfg-input" value="main" />
+          </div>
+        </div>
+
+        <div class="cfg-section">
+          <h3>Pi Crew</h3>
+          <div class="cfg-row">
+            <label class="cfg-label">Model</label>
+            <select class="cfg-input">
+              <option selected>claude-opus-4-7</option>
+              <option>claude-sonnet-4-20250514</option>
+              <option>claude-haiku-3-5-20241022</option>
+            </select>
+          </div>
+          <div class="cfg-row">
+            <label class="cfg-label">Max turns</label>
+            <input class="cfg-input" value="50" type="number" style="width:120px;" />
+            <span class="cfg-help">Safety limit before auto-pause</span>
+          </div>
+          <div class="cfg-row">
+            <label class="cfg-label">Auto-launch</label>
+            <select class="cfg-input">
+              <option>On file change</option>
+              <option selected>Manual only</option>
+              <option>On git push</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cfg-section">
+          <h3>Environment</h3>
+          <div class="cfg-row">
+            <label class="cfg-label">Variables</label>
+            <div class="cfg-tags" id="env-tags">
+              <span class="cfg-tag">NODE_ENV=development<span class="rm" onclick="this.parentElement.remove()">×</span></span>
+              <span class="cfg-tag">TAURI_DEV=true<span class="rm" onclick="this.parentElement.remove()">×</span></span>
+              <span class="cfg-tag">RUST_LOG=info<span class="rm" onclick="this.parentElement.remove()">×</span></span>
+            </div>
+            <button class="cfg-add">+ Add variable</button>
+          </div>
+          <div class="cfg-row">
+            <label class="cfg-label">Skills allowed</label>
+            <div class="cfg-tags">
+              <span class="cfg-tag">a11y-audit<span class="rm">×</span></span>
+              <span class="cfg-tag">tdd<span class="rm">×</span></span>
+              <span class="cfg-tag">review<span class="rm">×</span></span>
+              <span class="cfg-tag">commit<span class="rm">×</span></span>
+            </div>
+            <button class="cfg-add">+ Add skill</button>
+          </div>
+        </div>
+
+        <div class="cfg-section">
+          <h3>Danger zone</h3>
+          <div class="cfg-row">
+            <label class="cfg-label">Remove vessel</label>
+            <div>
+              <button class="btn btn--ghost btn--sm cfg-danger" style="color:var(--alert-red);border-color:var(--alert-red);">Unanchor and forget this vessel</button>
+              <p class="cfg-help" style="margin-top:4px;">Removes from fleet. Local repo and session history are preserved on disk.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /.vbody -->
+
+  <!-- ========== BOTTOM NAV ========== -->
+  <nav class="bottomnav">
+    <div class="bottomnav__group">
+      <a class="navbtn" href="dashboard.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13l2-6 4-3 4 3 2 6z"/><circle cx="8 cy="9" r="1.5"/></svg>
+        <span class="lbl">Fleet</span>
+      </a>
+      <a class="navbtn" href="captains-log.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+        <span class="lbl">Captain's Log</span>
+      </a>
+      <a class="navbtn" href="charts.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M4 11V7M7 11V4M10 11V8M13 11V6"/></svg>
+        <span class="lbl">Charts</span>
+      </a>
+      <a class="navbtn" href="helm.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="6"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+        <span class="lbl">Helm</span>
+      </a>
+    </div>
+    <div class="navmeta">
+      <span><span class="dot"></span>Pi v2.4.1</span>
+      <span class="text-faint">·</span>
+      <span id="vn-vessel-name">bridge</span>
+      <span class="text-faint">·</span>
+      <span class="text-dim">⌘\ tweak · ⌘K cmd</span>
+    </div>
+  </nav>
+
+</div><!-- /.app -->
+
+<script>
+// ----- URL param: which vessel? -----
+(function () {
+  'use strict';
+  var params = new URLSearchParams(window.location.search);
+  var vesselId = params.get('vessel') || 'bridge';
+
+  // Vessel database
+  var vessels = {
+    'bridge': {
+      icon: 'BR', name: 'bridge', fullname: 'bridge',
+      branch: 'main', path: '/Users/alex/code/bridge',
+      status: 'running', statusClass: 'dot--green pulse', statusLabel: 'Running',
+      sessions: 23, cost: '$12.84', uptime: '4h 32m', lastActive: '2 min ago',
+      crew: '1 Pi · thinking', cargo: '<span class="text-glow">+47</span> / <span style="color:var(--alert-red)">-12</span> · 3 files'
+    },
+    'open-design': {
+      icon: 'OD', name: 'open-design', fullname: 'open-design',
+      branch: 'feat/agent-browser', path: '/Users/alex/code/open-design',
+      status: 'running', statusClass: 'dot--green pulse', statusLabel: 'Running',
+      sessions: 41, cost: '$28.33', uptime: '2h 18m', lastActive: '1 min ago',
+      crew: '1 Pi · streaming', cargo: '<span class="text-glow">+124</span> / <span style="color:var(--alert-red)">-31</span> · 8 files'
+    },
+    'lighthouse': {
+      icon: 'LH', name: 'lighthouse', fullname: 'lighthouse',
+      branch: 'main', path: '/Users/alex/code/lighthouse',
+      status: 'build-error', statusClass: 'dot--amber', statusLabel: 'Build error',
+      sessions: 12, cost: '$4.21', uptime: '—', lastActive: '45 min ago',
+      crew: 'idle', cargo: 'no diff'
+    },
+    'pi-runtime': {
+      icon: 'PI', name: 'pi-runtime', fullname: 'pi-runtime',
+      branch: 'bugfix/event-stream', path: '/Users/alex/code/pi-runtime',
+      status: 'crashed', statusClass: 'dot--red', statusLabel: 'Crashed',
+      sessions: 67, cost: '$38.90', uptime: '—', lastActive: '3h ago',
+      crew: 'crashed', cargo: 'see log'
+    },
+    'dialysispal': {
+      icon: 'DP', name: 'dialysisPal', fullname: 'dialysisPal',
+      branch: 'develop', path: '/Users/alex/code/dialysisPal',
+      status: 'idle', statusClass: 'dot--dim', statusLabel: 'Idle',
+      sessions: 8, cost: '$2.14', uptime: '—', lastActive: '2h ago',
+      crew: 'idle', cargo: 'clean'
+    },
+    'fleet-charts': {
+      icon: 'FC', name: 'fleet-charts', fullname: 'fleet-charts',
+      branch: 'main', path: '/Users/alex/code/fleet-charts',
+      status: 'idle', statusClass: 'dot--dim', statusLabel: 'Idle',
+      sessions: 3, cost: '$0.87', uptime: '—', lastActive: '3d ago',
+      crew: 'idle', cargo: 'clean'
+    }
+  };
+
+  var v = vessels[vesselId] || vessels['bridge'];
+
+  // Populate hero
+  document.getElementById('vb-name').textContent = v.name;
+  document.getElementById('vb-icon').textContent = v.icon;
+  document.getElementById('vb-fullname').textContent = v.fullname;
+  document.getElementById('vb-branch').textContent = v.branch;
+  document.getElementById('vb-path').textContent = v.path;
+  document.getElementById('vb-sessions').textContent = v.sessions;
+  document.getElementById('vb-cost').textContent = v.cost;
+  document.getElementById('vb-uptime').textContent = v.uptime;
+  document.getElementById('vb-last').textContent = v.lastActive;
+
+  // Status pill
+  var pill = document.getElementById('vb-status-pill');
+  pill.innerHTML = '<span class="dot ' + v.statusClass + '"></span> ' + v.statusLabel;
+
+  // Nav meta
+  document.getElementById('vn-vessel-name').textContent = v.name;
+
+  // Page title
+  document.title = 'Bridge — ' + v.fullname + ' · Vessel';
+
+  // ---- Tab switching ----
+  document.querySelectorAll('.vtab').forEach(tab => {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.vtab').forEach(t => t.setAttribute('aria-selected', 'false'));
+      tab.setAttribute('aria-selected', 'true');
+      var target = tab.dataset.vtab;
+      document.querySelectorAll('#vpane-overview, #vpane-sessions, #vpane-cargo, #vpane-engine, #vpane-config').forEach(function (p) {
+        p.style.display = 'none';
+      });
+      var pane = document.getElementById('vpane-' + target);
+      if (pane) pane.style.display = 'flex';
+    });
+  });
+
+  // ---- Session filter pills ----
+  document.querySelectorAll('.sessions .pill').forEach(pill => {
+    pill.addEventListener('click', function () {
+      document.querySelectorAll('.sessions .pill').forEach(x => x.classList.remove('active'));
+      pill.classList.add('active');
+    });
+  });
+
+  // ---- Cargo file selection ----
+  document.querySelectorAll('.cv-file').forEach(f => {
+    f.addEventListener('click', function () {
+      document.querySelectorAll('.cv-file').forEach(x => x.removeAttribute('aria-current'));
+      f.setAttribute('aria-current', 'true');
+    });
+  });
+
+  // ---- Sparkline bars (overview) ----
+  function renderSpark(containerId, values, maxVal) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = '';
+    values.forEach(function (val) {
+      var bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.style.height = Math.max(4, (val / maxVal) * 100) + '%';
+      bar.title = val;
+      el.appendChild(bar);
+    });
+  }
+
+  renderSpark('spark-sessions', [3, 5, 2, 7, 4, 6, 3, 8, 5, 4, 2, 6], 8);
+  renderSpark('spark-cost', [0.4, 0.8, 0.3, 1.2, 0.6, 1.0, 0.5, 1.4, 0.9, 0.7, 0.3, 1.1], 1.4);
+
+  // ---- Heatmap (activity) ----
+  var heatmapEl = document.getElementById('heatmap');
+  if (heatmapEl) {
+    var intensity = [
+      [4, 6, 3, 8, 5, 2, 1],
+      [3, 5, 7, 4, 6, 3, 0],
+      [2, 4, 3, 5, 3, 1, 0],
+      [5, 7, 4, 6, 4, 2, 0]
+    ];
+    var maxIntensity = 8;
+    intensity.forEach(function (row) {
+      row.forEach(function (val) {
+        var cell = document.createElement('div');
+        cell.style.cssText = 'height:14px;border-radius:2px;background:' +
+          (val === 0 ? 'var(--mid)' :
+          'color-mix(in oklch, var(--glow) ' + Math.round((val / maxIntensity) * 50) + '%, var(--mid))') +
+          ';cursor:default;';
+        cell.title = val + ' sessions';
+        heatmapEl.appendChild(cell);
+      });
+    });
+  }
+
+  // ---- Recent sessions list (overview) ----
+  var recentData = [
+    { id: 'b4f9-7a21', meta: 'claude-opus-4-7 · 4 tools', cost: '$0.41', time: '12m 04s', date: 'Today', status: 'pulse' },
+    { id: 'aa12-19c4', meta: 'claude-opus-4-7 · 2 tools', cost: '$0.18', time: '8m 22s', date: 'Today', status: 'dot--green' },
+    { id: '88d3-be01', meta: 'claude-opus-4-7 · 6 tools', cost: '$0.94', time: '23m 11s', date: 'Today', status: 'dot--green' },
+    { id: 'cf71-a33c', meta: 'claude-opus-4-7 · 1 tool', cost: '$0.22', time: '5m 03s', date: 'Today', status: 'dot--amber' },
+    { id: '3a91-c82f', meta: 'claude-sonnet-4 · 3 tools', cost: '$0.11', time: '4m 18s', date: 'Yesterday', status: 'dot--green' },
+    { id: 'bb44-d17e', meta: 'claude-opus-4-7 · 8 tools', cost: '$1.82', time: '31m 44s', date: 'Yesterday', status: 'dot--green' },
+    { id: '105f-e40a', meta: 'claude-opus-4-7 · 5 tools', cost: '$0.67', time: '14m 02s', date: 'May 19', status: 'dot--green' },
+    { id: '72cb-9f1d', meta: 'claude-opus-4-7 · 2 tools', cost: '$0.29', time: '6m 33s', date: 'May 18', status: 'dot--green' }
+  ];
+
+  var recentList = document.getElementById('recent-list');
+  if (recentList) {
+    recentData.forEach(function (s) {
+      var row = document.createElement('div');
+      row.className = 'session-row';
+      row.innerHTML =
+        '<span class="dot ' + s.status + '" style="flex-shrink:0;"></span>' +
+        '<span class="session-id">' + s.id + '</span>' +
+        '<span class="session-meta">' + s.meta + '</span>' +
+        '<span class="session-cost">' + s.cost + '</span>' +
+        '<span class="session-time">' + s.time + '</span>' +
+        '<span class="session-date">' + s.date + '</span>';
+      recentList.appendChild(row);
+    });
+  }
+
+})();
+</script>
+<script src="js/commandPalette.js" defer></script>
+</body>
+</html>

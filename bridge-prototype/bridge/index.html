@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bridge</title>
+<link rel="stylesheet" href="styles/bridge.css" />
+<script src="js/theme.js"></script>
+<style>
+  /* ===== index — welcome / launcher ===== */
+  .welcome {
+    display: grid;
+    grid-template-rows: 32px 1fr 48px;
+    height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+
+  .welcome__main {
+    overflow: auto;
+    padding: 56px clamp(40px, 6vw, 96px) 64px;
+    min-height: 0;
+    background:
+      radial-gradient(700px 380px at 50% -10%, color-mix(in oklch, var(--glow) 8%, transparent), transparent 65%),
+      transparent;
+  }
+
+  /* Hero */
+  .hero {
+    max-width: 1100px;
+    margin: 0 auto var(--sp-3xl);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: var(--sp-3xl);
+    padding-bottom: var(--sp-2xl);
+    border-bottom: 1px solid var(--border-base);
+  }
+  .hero__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-lg);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: var(--sp-md);
+  }
+  .hero__mark {
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    border-radius: 6px;
+    background: linear-gradient(140deg,
+      color-mix(in oklch, var(--glow) 30%, transparent),
+      color-mix(in oklch, var(--cargo-blue) 25%, transparent));
+    border: 1px solid var(--border-glow);
+    color: var(--glow);
+    box-shadow: var(--glow-sm);
+  }
+  .hero__mark svg { width: 16px; height: 16px; }
+  .hero h1 {
+    margin: 0 0 var(--sp-md);
+    font-size: clamp(32px, 4.4vw, 52px);
+    font-weight: 800;
+    letter-spacing: -1.4px;
+    line-height: 1.04;
+    color: var(--foam);
+  }
+  .hero h1 .accent {
+    background: linear-gradient(90deg, var(--glow), color-mix(in oklch, var(--glow) 60%, var(--cargo-blue)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p.lede {
+    max-width: 640px;
+    color: var(--muted);
+    font-size: 15.5px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .hero__status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--sp-md);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    min-width: 200px;
+  }
+  .hero__status .pill {
+    display: flex; align-items: center; gap: var(--sp-md);
+    padding: 6px 12px;
+    border-radius: 99px;
+    background: color-mix(in oklch, var(--sea-green) 8%, transparent);
+    border: 1px solid color-mix(in oklch, var(--sea-green) 30%, transparent);
+    color: var(--sea-green);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .hero__status .stat {
+    display: flex; gap: var(--sp-md); justify-content: flex-end;
+  }
+  .hero__status .stat b { color: var(--foam); font-weight: 600; }
+  .hero__status .stat .l { color: var(--dim); letter-spacing: 0.5px; text-transform: uppercase; font-size: 9.5px; }
+
+  /* Screen cards */
+  .screens {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-2xl);
+    margin-bottom: 56px;
+  }
+  @media (max-width: 720px) { .screens { grid-template-columns: 1fr; } }
+
+  .screen-card {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    background: var(--panel);
+    border: 1px solid var(--border-base);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    position: relative;
+    transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  }
+  .screen-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-raised);
+    box-shadow: var(--shadow-floating);
+  }
+  .screen-card:hover .screen-card__preview { background-position: center 30%; }
+  .screen-card:focus-visible { outline: 1px solid var(--glow); outline-offset: 3px; }
+  .screen-card .kbd-hint {
+    position: absolute;
+    top: var(--sp-md); right: var(--sp-md);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    color: var(--dim);
+    background: color-mix(in oklch, var(--abyss) 70%, transparent);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-base);
+    border-radius: 4px;
+    padding: 3px 6px;
+    z-index: 2;
+  }
+
+  .screen-card__preview {
+    aspect-ratio: 16 / 10;
+    background: var(--abyss);
+    border-bottom: 1px solid var(--border-base);
+    position: relative;
+    overflow: hidden;
+    display: grid; place-items: center;
+  }
+  .preview-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(color-mix(in oklch, var(--mid) 30%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklch, var(--mid) 30%, transparent) 1px, transparent 1px);
+    background-size: 24px 24px;
+    opacity: 0.5;
+  }
+
+  /* preview svgs sit on top of grid */
+  .screen-card__preview svg.preview { position: relative; z-index: 1; max-width: 90%; max-height: 90%; }
+
+  .screen-card__body {
+    padding: var(--sp-xl) var(--sp-xl) var(--sp-2xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-md);
+    flex: 1;
+  }
+  .screen-card__kind {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .screen-card h3 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--foam);
+  }
+  .screen-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .screen-card__foot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-md);
+    padding-top: var(--sp-md);
+    border-top: 1px dashed color-mix(in oklch, var(--mid) 40%, transparent);
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .screen-card__foot .ico { width: 13px; height: 13px; color: var(--glow); }
+  .screen-card__foot .arrow {
+    margin-left: auto;
+    color: var(--glow);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    transition: transform var(--t-fast);
+  }
+  .screen-card:hover .screen-card__foot .arrow { transform: translateX(3px); }
+
+  /* Secondary row: tips + what's new */
+  .below {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: var(--sp-2xl);
+  }
+  @media (max-width: 880px) { .below { grid-template-columns: 1fr; } }
+
+  .panel-card {
+    background: var(--panel);
+    border: 1px solid var(--border-base);
+    border-radius: var(--r-lg);
+    padding: var(--sp-xl) var(--sp-2xl) var(--sp-2xl);
+  }
+  .panel-card h4 {
+    margin: 0 0 var(--sp-md);
+    font-size: 11.5px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex; align-items: center; gap: var(--sp-md);
+  }
+  .panel-card h4 .ico { width: 14px; height: 14px; color: var(--glow); }
+
+  .changelog { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--sp-md); }
+  .changelog li {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: var(--sp-lg);
+    align-items: baseline;
+    font-size: 13px;
+    color: var(--muted);
+    padding-bottom: var(--sp-md);
+    border-bottom: 1px dashed color-mix(in oklch, var(--mid) 35%, transparent);
+  }
+  .changelog li:last-child { border-bottom: 0; padding-bottom: 0; }
+  .changelog .tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.4px;
+    padding: 2px 7px;
+    border-radius: 99px;
+    text-align: center;
+    border: 1px solid var(--border-base);
+  }
+  .changelog .tag.add  { color: var(--sea-green); background: color-mix(in oklch, var(--sea-green) 10%, transparent); border-color: color-mix(in oklch, var(--sea-green) 30%, transparent); }
+  .changelog .tag.fix  { color: var(--brass);     background: color-mix(in oklch, var(--brass) 10%, transparent);     border-color: color-mix(in oklch, var(--brass) 30%, transparent); }
+  .changelog .tag.note { color: var(--cargo-blue);background: color-mix(in oklch, var(--cargo-blue) 10%, transparent);border-color: color-mix(in oklch, var(--cargo-blue) 30%, transparent); }
+  .changelog .text b { color: var(--foam); font-weight: 600; }
+  .changelog .text .mono { color: var(--muted); font-size: 11.5px; }
+
+  .tips { display: flex; flex-direction: column; gap: var(--sp-md); }
+  .tip {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: var(--sp-lg);
+    padding: var(--sp-md) 0;
+    border-bottom: 1px dashed color-mix(in oklch, var(--mid) 35%, transparent);
+  }
+  .tip:last-child { border-bottom: 0; }
+  .tip .keys { display: flex; gap: 4px; }
+  .tip .text { color: var(--muted); font-size: 12.5px; }
+  .tip .text b { color: var(--foam); font-weight: 600; }
+
+  /* Subtle deck rhythm break */
+  .compass {
+    position: absolute;
+    right: 6vw; top: 96px;
+    width: 220px; height: 220px;
+    opacity: 0.12;
+    pointer-events: none;
+    color: var(--glow);
+    animation: spin 80s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @media (max-width: 1100px) { .compass { display: none; } }
+</style>
+</head>
+<body>
+<div class="welcome">
+
+  <!-- ========== TITLE BAR ========== -->
+  <header class="titlebar">
+    <div class="tb-left">
+      <span class="tb-title"><b>BRIDGE</b></span>
+    </div>
+    <div class="tb-title">
+      <span class="tb-pill">v0.1 Sea Trials</span>
+    </div>
+    <div class="tb-right">
+      <span class="tb-title text-faint mono">⌘K · Command</span>
+    </div>
+  </header>
+
+  <!-- ========== MAIN ========== -->
+  <main class="welcome__main">
+
+    <svg class="compass" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="0.6">
+      <circle cx="50" cy="50" r="48"/>
+      <circle cx="50" cy="50" r="40"/>
+      <circle cx="50" cy="50" r="2" fill="currentColor"/>
+      <path d="M50 4v92M4 50h92M19 19l62 62M81 19L19 81"/>
+      <path d="M50 8l4 12-4-4-4 4z" fill="currentColor"/>
+      <text x="50" y="14" font-family="serif" font-size="6" text-anchor="middle" fill="currentColor">N</text>
+      <text x="86" y="52" font-family="serif" font-size="6" text-anchor="middle" fill="currentColor">E</text>
+      <text x="50" y="92" font-family="serif" font-size="6" text-anchor="middle" fill="currentColor">S</text>
+      <text x="14" y="52" font-family="serif" font-size="6" text-anchor="middle" fill="currentColor">W</text>
+    </svg>
+
+    <!-- ===== HERO ===== -->
+    <header class="hero">
+      <div>
+        <div class="hero__brand">
+          <span class="hero__mark">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l4 5v8l-4-2-4 2V6l4-5z"/></svg>
+          </span>
+          <span>Tauri 2 · macOS native · Pi v2.4.1</span>
+        </div>
+        <h1>One <span class="accent">bridge</span> for every vessel<br/>in your dock.</h1>
+        <p class="lede">
+          Run, observe, and Set Sail across all your Pi sessions and codebases from a single
+          mission-control window. No more juggling six terminals, three git repos, and a dozen
+          half-remembered branch names.
+        </p>
+      </div>
+      <div class="hero__status">
+        <span class="pill"><span class="dot dot--green pulse"></span>Pi connected · port 7172</span>
+        <div class="stat"><span class="l">VESSELS</span><b>6</b></div>
+        <div class="stat"><span class="l">RUNNING</span><b>2</b></div>
+        <div class="stat"><span class="l">SPEND TODAY</span><b>$3.42</b></div>
+      </div>
+    </header>
+
+    <!-- ===== SCREEN CARDS ===== -->
+    <div class="screens">
+
+      <a href="dashboard.html" class="screen-card" data-key="1">
+        <span class="kbd-hint">1</span>
+        <div class="screen-card__preview">
+          <div class="preview-grid"></div>
+          <svg class="preview" viewBox="0 0 320 200" fill="none" stroke="currentColor" stroke-width="1">
+            <!-- title bar -->
+            <rect x="8" y="8" width="304" height="14" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <!-- fleet -->
+            <rect x="8" y="26" width="64" height="138" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="14" y="34" width="52" height="12" rx="2" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="50" width="52" height="12" rx="2" fill="oklch(0.21 0.020 250)" stroke="oklch(0.82 0.15 195)" stroke-opacity="0.5"/>
+            <rect x="14" y="66" width="52" height="12" rx="2" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="82" width="52" height="12" rx="2" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="98" width="52" height="12" rx="2" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="114" width="52" height="12" rx="2" fill="oklch(0.21 0.020 250)"/>
+            <!-- vessel panel -->
+            <rect x="76" y="26" width="160" height="138" rx="2" fill="oklch(0.14 0.015 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="82" y="32" width="86" height="10" rx="2" fill="oklch(0.21 0.020 250)"/>
+            <rect x="82" y="48" width="32" height="8" rx="1" fill="oklch(0.21 0.020 250)" stroke="oklch(0.82 0.15 195)" stroke-opacity="0.6"/>
+            <rect x="118" y="48" width="32" height="8" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="154" y="48" width="32" height="8" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <!-- terminal lines -->
+            <rect x="82" y="62" width="146" height="2" fill="oklch(0.78 0.16 155)" opacity="0.6"/>
+            <rect x="82" y="68" width="130" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+            <rect x="82" y="74" width="138" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+            <rect x="82" y="80" width="80" height="2" fill="oklch(0.82 0.15 195)" opacity="0.7"/>
+            <rect x="82" y="86" width="120" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+            <rect x="82" y="92" width="100" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+            <rect x="82" y="98" width="60" height="2" fill="oklch(0.85 0.18 75)" opacity="0.6"/>
+            <rect x="82" y="104" width="146" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+            <rect x="82" y="110" width="118" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+            <!-- cargo -->
+            <rect x="240" y="26" width="72" height="138" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="246" y="34" width="60" height="6" rx="1" fill="oklch(0.72 0.14 230)" opacity="0.4"/>
+            <rect x="246" y="44" width="60" height="6" rx="1" fill="oklch(0.78 0.16 155)" opacity="0.4"/>
+            <rect x="246" y="54" width="60" height="6" rx="1" fill="oklch(0.65 0.22 25)" opacity="0.4"/>
+            <rect x="246" y="64" width="60" height="6" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="246" y="74" width="60" height="6" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="246" y="120" width="60" height="38" rx="2" fill="oklch(0.21 0.020 250)" stroke="oklch(0.82 0.15 195)" stroke-opacity="0.5"/>
+            <rect x="252" y="146" width="48" height="8" rx="2" fill="oklch(0.82 0.15 195)" opacity="0.7"/>
+            <!-- log strip -->
+            <rect x="8" y="168" width="304" height="22" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <circle cx="20" cy="179" r="2" fill="oklch(0.78 0.16 155)"/>
+            <circle cx="70" cy="179" r="2" fill="oklch(0.68 0.18 300)"/>
+            <circle cx="120" cy="179" r="2" fill="oklch(0.82 0.15 195)"/>
+            <circle cx="170" cy="179" r="2" fill="oklch(0.85 0.18 75)"/>
+            <circle cx="220" cy="179" r="2" fill="oklch(0.65 0.22 25)"/>
+          </svg>
+        </div>
+        <div class="screen-card__body">
+          <span class="screen-card__kind">⚓ Mission control</span>
+          <h3>Fleet Dashboard</h3>
+          <p>Three-panel cockpit: vessels list, active Pi session with Crew · Comms · Engine tabs, and a Cargo bay with diff and Set Sail.</p>
+          <div class="screen-card__foot">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13l2-6 4-3 4 3 2 6z"/><circle cx="8" cy="9" r="1.5"/></svg>
+            <span>6 vessels · 2 running</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="captains-log.html" class="screen-card" data-key="2">
+        <span class="kbd-hint">2</span>
+        <div class="screen-card__preview">
+          <div class="preview-grid"></div>
+          <svg class="preview" viewBox="0 0 320 200" fill="none" stroke="currentColor" stroke-width="1">
+            <rect x="8" y="8" width="304" height="14" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <!-- filter sidebar -->
+            <rect x="8" y="26" width="76" height="160" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="14" y="34" width="64" height="4" fill="oklch(0.50 0.012 250)" opacity="0.6"/>
+            <rect x="14" y="44" width="64" height="8" rx="1" fill="oklch(0.21 0.020 250)" stroke="oklch(0.82 0.15 195)" stroke-opacity="0.5"/>
+            <rect x="14" y="56" width="64" height="8" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="68" width="64" height="8" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="80" width="64" height="8" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="96" width="64" height="4" fill="oklch(0.50 0.012 250)" opacity="0.6"/>
+            <rect x="14" y="104" width="64" height="6" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="114" width="64" height="6" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="124" width="64" height="6" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="134" width="64" height="6" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <!-- timeline -->
+            <rect x="88" y="26" width="224" height="14" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="94" y="31" width="60" height="4" fill="oklch(0.21 0.020 250)"/>
+            <!-- day group header -->
+            <rect x="92" y="46" width="48" height="6" fill="oklch(0.98 0.005 250)" opacity="0.5"/>
+            <!-- log rows -->
+            <rect x="92" y="58" width="220" height="14" rx="2" fill="oklch(0.21 0.020 250)" opacity="0.4"/>
+            <circle cx="116" cy="65" r="3" fill="oklch(0.78 0.16 155)"/>
+            <rect x="124" y="62" width="100" height="2" fill="oklch(0.98 0.005 250)" opacity="0.8"/>
+            <rect x="124" y="67" width="60" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+
+            <rect x="92" y="76" width="220" height="14" rx="2" fill="oklch(0.21 0.020 250)" opacity="0.4"/>
+            <circle cx="116" cy="83" r="3" fill="oklch(0.82 0.15 195)"/>
+            <rect x="124" y="80" width="120" height="2" fill="oklch(0.98 0.005 250)" opacity="0.8"/>
+            <rect x="124" y="85" width="80" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+
+            <rect x="92" y="94" width="220" height="14" rx="2" fill="oklch(0.21 0.020 250)" opacity="0.4"/>
+            <circle cx="116" cy="101" r="3" fill="oklch(0.65 0.22 25)"/>
+            <rect x="124" y="98" width="90" height="2" fill="oklch(0.65 0.22 25)" opacity="0.7"/>
+            <rect x="124" y="103" width="70" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+
+            <rect x="92" y="112" width="220" height="14" rx="2" fill="oklch(0.21 0.020 250)" opacity="0.4"/>
+            <circle cx="116" cy="119" r="3" fill="oklch(0.68 0.18 300)"/>
+            <rect x="124" y="116" width="110" height="2" fill="oklch(0.98 0.005 250)" opacity="0.8"/>
+            <rect x="124" y="121" width="70" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+
+            <rect x="92" y="130" width="220" height="14" rx="2" fill="oklch(0.21 0.020 250)" opacity="0.4"/>
+            <circle cx="116" cy="137" r="3" fill="oklch(0.85 0.18 75)"/>
+            <rect x="124" y="134" width="130" height="2" fill="oklch(0.98 0.005 250)" opacity="0.8"/>
+            <rect x="124" y="139" width="80" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+
+            <rect x="92" y="148" width="220" height="14" rx="2" fill="oklch(0.21 0.020 250)" opacity="0.4"/>
+            <circle cx="116" cy="155" r="3" fill="oklch(0.78 0.16 155)"/>
+            <rect x="124" y="152" width="80" height="2" fill="oklch(0.98 0.005 250)" opacity="0.8"/>
+            <rect x="124" y="157" width="60" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+
+            <rect x="92" y="166" width="220" height="14" rx="2" fill="oklch(0.21 0.020 250)" opacity="0.4"/>
+            <circle cx="116" cy="173" r="3" fill="oklch(0.82 0.15 195)"/>
+            <rect x="124" y="170" width="100" height="2" fill="oklch(0.98 0.005 250)" opacity="0.8"/>
+            <rect x="124" y="175" width="60" height="2" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+          </svg>
+        </div>
+        <div class="screen-card__body">
+          <span class="screen-card__kind">★ Observability</span>
+          <h3>Captain's Log</h3>
+          <p>Every Pi session, tool call, build, and Set Sail across the fleet. Filter by vessel, type, time. Pin, search, export.</p>
+          <div class="screen-card__foot">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+            <span>25 events · last 24h</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="charts.html" class="screen-card" data-key="3">
+        <span class="kbd-hint">3</span>
+        <div class="screen-card__preview">
+          <div class="preview-grid"></div>
+          <svg class="preview" viewBox="0 0 320 200" fill="none" stroke="currentColor" stroke-width="1">
+            <!-- title bar -->
+            <rect x="8" y="8" width="304" height="14" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <!-- left nav -->
+            <rect x="8" y="26" width="64" height="160" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="14" y="32" width="38" height="3" fill="oklch(0.50 0.012 250)" opacity="0.5"/>
+            <rect x="14" y="40" width="16" height="9" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="32" y="40" width="16" height="9" rx="1" fill="oklch(0.21 0.020 250)" stroke="oklch(0.82 0.15 195)" stroke-opacity="0.6"/>
+            <rect x="50" y="40" width="16" height="9" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="56" width="38" height="3" fill="oklch(0.50 0.012 250)" opacity="0.5"/>
+            <rect x="14" y="64" width="52" height="6" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="72" width="52" height="6" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="80" width="52" height="6" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="88" width="52" height="6" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="100" width="38" height="3" fill="oklch(0.50 0.012 250)" opacity="0.5"/>
+            <rect x="14" y="108" width="52" height="5" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="116" width="52" height="5" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="124" width="52" height="5" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="132" width="52" height="5" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <!-- totals strip -->
+            <rect x="76" y="26" width="56" height="32" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="76" y="26" width="2" height="32" fill="oklch(0.82 0.15 195)" opacity="0.7"/>
+            <rect x="82" y="32" width="20" height="3" fill="oklch(0.50 0.012 250)" opacity="0.6"/>
+            <rect x="82" y="40" width="32" height="9" fill="oklch(0.98 0.005 250)" opacity="0.85"/>
+            <rect x="82" y="52" width="36" height="3" fill="oklch(0.78 0.16 155)" opacity="0.6"/>
+
+            <rect x="136" y="26" width="56" height="32" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="136" y="26" width="2" height="32" fill="oklch(0.85 0.18 75)" opacity="0.7"/>
+            <rect x="142" y="32" width="16" height="3" fill="oklch(0.50 0.012 250)" opacity="0.6"/>
+            <rect x="142" y="40" width="36" height="9" fill="oklch(0.98 0.005 250)" opacity="0.85"/>
+            <rect x="142" y="52" width="32" height="3" fill="oklch(0.78 0.16 155)" opacity="0.6"/>
+
+            <rect x="196" y="26" width="56" height="32" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="196" y="26" width="2" height="32" fill="oklch(0.72 0.14 230)" opacity="0.7"/>
+            <rect x="202" y="32" width="24" height="3" fill="oklch(0.50 0.012 250)" opacity="0.6"/>
+            <rect x="202" y="40" width="30" height="9" fill="oklch(0.98 0.005 250)" opacity="0.85"/>
+            <rect x="202" y="52" width="22" height="3" fill="oklch(0.65 0.22 25)" opacity="0.6"/>
+
+            <rect x="256" y="26" width="56" height="32" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="256" y="26" width="2" height="32" fill="oklch(0.78 0.16 155)" opacity="0.7"/>
+            <rect x="262" y="32" width="28" height="3" fill="oklch(0.50 0.012 250)" opacity="0.6"/>
+            <rect x="262" y="40" width="22" height="9" fill="oklch(0.98 0.005 250)" opacity="0.85"/>
+            <rect x="262" y="52" width="36" height="3" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+
+            <!-- primary stacked bar chart -->
+            <rect x="76" y="64" width="236" height="74" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="84" y="70" width="80" height="3" fill="oklch(0.98 0.005 250)" opacity="0.7"/>
+            <!-- bars -->
+            <g transform="translate(88, 80)">
+              <rect x="0"   y="42" width="16" height="14" fill="oklch(0.82 0.15 195)" opacity="0.85"/>
+              <rect x="0"   y="32" width="16" height="10" fill="oklch(0.72 0.14 230)" opacity="0.85"/>
+              <rect x="0"   y="24" width="16" height="8"  fill="oklch(0.85 0.18 75)" opacity="0.85"/>
+
+              <rect x="28"  y="46" width="16" height="10" fill="oklch(0.82 0.15 195)" opacity="0.85"/>
+              <rect x="28"  y="38" width="16" height="8"  fill="oklch(0.72 0.14 230)" opacity="0.85"/>
+              <rect x="28"  y="32" width="16" height="6"  fill="oklch(0.78 0.16 155)" opacity="0.85"/>
+
+              <rect x="56"  y="36" width="16" height="20" fill="oklch(0.82 0.15 195)" opacity="0.85"/>
+              <rect x="56"  y="22" width="16" height="14" fill="oklch(0.72 0.14 230)" opacity="0.85"/>
+              <rect x="56"  y="14" width="16" height="8"  fill="oklch(0.85 0.18 75)" opacity="0.85"/>
+
+              <rect x="84"  y="28" width="16" height="28" fill="oklch(0.82 0.15 195)" opacity="0.85"/>
+              <rect x="84"  y="12" width="16" height="16" fill="oklch(0.72 0.14 230)" opacity="0.85"/>
+              <rect x="84"  y="6"  width="16" height="6"  fill="oklch(0.85 0.18 75)" opacity="0.85"/>
+
+              <rect x="112" y="34" width="16" height="22" fill="oklch(0.82 0.15 195)" opacity="0.85"/>
+              <rect x="112" y="22" width="16" height="12" fill="oklch(0.65 0.22 25)" opacity="0.85"/>
+              <rect x="112" y="16" width="16" height="6"  fill="oklch(0.78 0.16 155)" opacity="0.85"/>
+
+              <rect x="140" y="22" width="16" height="34" fill="oklch(0.82 0.15 195)" opacity="0.85"/>
+              <rect x="140" y="8"  width="16" height="14" fill="oklch(0.72 0.14 230)" opacity="0.85"/>
+
+              <rect x="168" y="10" width="16" height="46" fill="oklch(0.82 0.15 195)" opacity="0.85"/>
+              <rect x="168" y="0"  width="16" height="10" fill="oklch(0.72 0.14 230)" opacity="0.85"/>
+            </g>
+            <line x1="84" y1="138" x2="304" y2="138" stroke="oklch(0.26 0.022 250)" stroke-width="0.6"/>
+
+            <!-- cumulative line + ranked bars -->
+            <rect x="76" y="144" width="138" height="42" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <path d="M 84 178 L 100 174 L 116 168 L 134 160 L 152 156 L 172 152 L 192 150" stroke="oklch(0.82 0.15 195)" stroke-width="1.4" fill="none"/>
+            <path d="M 84 178 L 100 174 L 116 168 L 134 160 L 152 156 L 172 152 L 192 150 L 192 184 L 84 184 Z" fill="oklch(0.82 0.15 195)" opacity="0.18"/>
+            <circle cx="84" cy="178" r="1.5" fill="oklch(0.82 0.15 195)"/>
+            <circle cx="116" cy="168" r="1.5" fill="oklch(0.82 0.15 195)"/>
+            <circle cx="152" cy="156" r="1.5" fill="oklch(0.82 0.15 195)"/>
+            <circle cx="192" cy="150" r="1.5" fill="oklch(0.82 0.15 195)"/>
+
+            <rect x="218" y="144" width="94" height="42" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="226" y="150" width="40" height="4" rx="1" fill="oklch(0.82 0.15 195)" opacity="0.85"/>
+            <rect x="226" y="156" width="32" height="4" rx="1" fill="oklch(0.72 0.14 230)" opacity="0.85"/>
+            <rect x="226" y="162" width="22" height="4" rx="1" fill="oklch(0.85 0.18 75)" opacity="0.85"/>
+            <rect x="226" y="168" width="18" height="4" rx="1" fill="oklch(0.65 0.22 25)" opacity="0.85"/>
+            <rect x="226" y="174" width="12" height="4" rx="1" fill="oklch(0.78 0.16 155)" opacity="0.85"/>
+            <rect x="226" y="180" width="8"  height="4" rx="1" fill="oklch(0.68 0.18 300)" opacity="0.85"/>
+          </svg>
+        </div>
+        <div class="screen-card__body">
+          <span class="screen-card__kind">▴ Analytics</span>
+          <h3>Fleet Charts</h3>
+          <p>Sessions, spend, and time-on-vessel across every Pi run. Stacked daily, cumulative line, ranked by vessel, exportable. Nothing leaves the box.</p>
+          <div class="screen-card__foot">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M4 11V7M7 11V4M10 11V8M13 11V6"/></svg>
+            <span>73 sessions · last 7 days · $17.65</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="vessel.html?vessel=bridge" class="screen-card" data-key="5">
+        <span class="kbd-hint">5</span>
+        <div class="screen-card__preview">
+          <div class="preview-grid"></div>
+          <svg class="preview" viewBox="0 0 320 200" fill="none" stroke="currentColor" stroke-width="1">
+            <!-- title bar -->
+            <rect x="8" y="8" width="304" height="14" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="16" y="11" width="30" height="8" rx="1" fill="oklch(0.72 0.010 250)" opacity="0.6"/>
+            <text x="54" y="17" fill="oklch(0.72 0.010 250)" font-family="'Inter',sans-serif" font-size="7" opacity="0.8">| bridge · Vessel</text>
+            <!-- hero -->
+            <rect x="20" y="30" width="44" height="44" rx="10" fill="oklch(0.17 0.018 250)" stroke="oklch(0.26 0.022 250)"/>
+            <text x="42" y="57" fill="oklch(0.82 0.15 195)" font-family="'JetBrains Mono',monospace" font-size="16" font-weight="700" text-anchor="middle">BR</text>
+            <rect x="72" y="34" width="70" height="9" fill="oklch(0.98 0.005 250)" opacity="0.9"/>
+            <rect x="72" y="48" width="40" height="5" rx="2" fill="oklch(0.21 0.020 250)" stroke="oklch(0.50 0.012 250)" stroke-opacity="0.6"/>
+            <text x="94" y="52" fill="oklch(0.72 0.010 250)" font-size="8" text-anchor="middle">main</text>
+            <rect x="72" y="58" width="120" height="4" rx="1" fill="oklch(0.35 0.010 250)" opacity="0.5"/>
+            <!-- stat cards -->
+            <rect x="20" y="82" width="70" height="28" rx="3" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="28" y="88" width="36" height="4" rx="1" fill="oklch(0.50 0.012 250)" opacity="0.5"/>
+            <rect x="28" y="96" width="54" height="7" fill="oklch(0.98 0.005 250)" opacity="0.85"/>
+            <rect x="100" y="82" width="70" height="28" rx="3" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="180" y="82" width="70" height="28" rx="3" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="260" y="82" width="56" height="28" rx="3" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="260" y="90" width="24" height="12" rx="2" fill="oklch(0.21 0.020 250)" stroke="oklch(0.82 0.15 195)" stroke-opacity="0.6"/>
+            <!-- tabs -->
+            <rect x="8" y="118" width="304" height="22" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="18" y="125" width="50" height="8" rx="1" fill="oklch(0.82 0.15 195)" opacity="0.15"/>
+            <text x="43" y="132" fill="oklch(0.82 0.15 195)" font-size="7.5" text-anchor="middle" font-weight="600">Overview</text>
+            <rect x="74" y="126" width="55" height="6" rx="1" fill="oklch(0.50 0.012 250)" opacity="0.4"/>
+            <rect x="135" y="126" width="55" height="6" rx="1" fill="oklch(0.50 0.012 250)" opacity="0.4"/>
+            <rect x="196" y="126" width="40" height="6" rx="1" fill="oklch(0.50 0.012 250)" opacity="0.4"/>
+            <rect x="242" y="126" width="40" height="6" rx="1" fill="oklch(0.50 0.012 250)" opacity="0.4"/>
+            <rect x="290" y="126" width="18" height="6" rx="1" fill="oklch(0.50 0.012 250)" opacity="0.4"/>
+            <!-- session list preview -->
+            <rect x="8" y="144" width="304" height="48" rx="2" fill="oklch(0.14 0.015 250)" stroke="oklch(0.26 0.022 250)"/>
+            <circle cx="22" cy="156" r="4" fill="oklch(0.78 0.16 155)" opacity="0.7"/>
+            <rect x="32" y="152" width="70" height="4" rx="1" fill="oklch(0.72 0.010 250)" opacity="0.6"/>
+            <rect x="32" y="160" width="100" height="3" rx="1" fill="oklch(0.50 0.012 250)" opacity="0.3"/>
+            <rect x="200" y="154" width="36" height="5" rx="1" fill="oklch(0.85 0.18 75)" opacity="0.6"/>
+            <rect x="244" y="155" width="32" height="4" rx="1" fill="oklch(0.50 0.012 250)" opacity="0.4"/>
+            <rect x="284" y="155" width="24" height="4" rx="1" fill="oklch(0.35 0.010 250)" opacity="0.4"/>
+            <line x1="16" y1="168" x2="304" y2="168" stroke="oklch(0.26 0.022 250)" stroke-width="0.5"/>
+            <circle cx="22" cy="178" r="4" fill="oklch(0.78 0.16 155)"/>
+            <rect x="32" y="174" width="70" height="4" rx="1" fill="oklch(0.72 0.010 250)" opacity="0.6"/>
+            <rect x="200" y="176" width="30" height="4" rx="1" fill="oklch(0.85 0.18 75)" opacity="0.5"/>
+          </svg>
+        </div>
+        <div class="screen-card__body">
+          <span class="screen-card__kind">⚓ Detail</span>
+          <h3>Vessel Detail</h3>
+          <p>Deep-dive per-vessel view: sessions, cargo diffs, engine processes, and config — all in one place with full turn-by-turn replay.</p>
+          <div class="screen-card__foot">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13l2-6 4-3 4 3 2 6z"/><circle cx="8" cy="9" r="1.5"/></svg>
+            <span>5 tabs · per-vessel config</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="helm.html" class="screen-card" data-key="4">
+        <span class="kbd-hint">4</span>
+        <div class="screen-card__preview">
+          <div class="preview-grid"></div>
+          <svg class="preview" viewBox="0 0 320 200" fill="none" stroke="currentColor" stroke-width="1">
+            <rect x="8" y="8" width="304" height="14" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <!-- helm nav -->
+            <rect x="8" y="26" width="74" height="160" rx="2" fill="oklch(0.16 0.016 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="14" y="32" width="48" height="3" fill="oklch(0.50 0.012 250)" opacity="0.5"/>
+            <rect x="14" y="40" width="62" height="9" rx="1" fill="oklch(0.21 0.020 250)" stroke="oklch(0.82 0.15 195)" stroke-opacity="0.5"/>
+            <rect x="14" y="52" width="62" height="9" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="64" width="62" height="9" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="80" width="48" height="3" fill="oklch(0.50 0.012 250)" opacity="0.5"/>
+            <rect x="14" y="88" width="62" height="9" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="100" width="62" height="9" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="116" width="48" height="3" fill="oklch(0.50 0.012 250)" opacity="0.5"/>
+            <rect x="14" y="124" width="62" height="9" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <rect x="14" y="136" width="62" height="9" rx="1" fill="oklch(0.21 0.020 250)"/>
+            <!-- helm content -->
+            <rect x="86" y="26" width="226" height="160" rx="2" fill="oklch(0.14 0.015 250)" stroke="oklch(0.26 0.022 250)"/>
+            <rect x="94" y="34" width="120" height="8" fill="oklch(0.98 0.005 250)" opacity="0.85"/>
+            <rect x="94" y="46" width="200" height="3" fill="oklch(0.72 0.010 250)" opacity="0.5"/>
+            <!-- setting row -->
+            <rect x="94" y="60" width="80" height="4" fill="oklch(0.98 0.005 250)" opacity="0.7"/>
+            <rect x="94" y="68" width="120" height="3" fill="oklch(0.72 0.010 250)" opacity="0.4"/>
+            <rect x="220" y="60" width="80" height="20" rx="2" fill="oklch(0.21 0.020 250)" stroke="oklch(0.82 0.15 195)" stroke-opacity="0.5"/>
+            <circle cx="290" cy="70" r="6" fill="oklch(0.82 0.15 195)" opacity="0.8"/>
+            <!-- another -->
+            <rect x="94" y="88" width="80" height="4" fill="oklch(0.98 0.005 250)" opacity="0.7"/>
+            <rect x="94" y="96" width="100" height="3" fill="oklch(0.72 0.010 250)" opacity="0.4"/>
+            <rect x="220" y="88" width="80" height="14" rx="2" fill="oklch(0.21 0.020 250)"/>
+            <!-- swatches -->
+            <rect x="94" y="118" width="80" height="4" fill="oklch(0.98 0.005 250)" opacity="0.7"/>
+            <rect x="94" y="126" width="160" height="3" fill="oklch(0.72 0.010 250)" opacity="0.4"/>
+            <circle cx="226" cy="120" r="6" fill="oklch(0.82 0.15 195)"/>
+            <circle cx="240" cy="120" r="6" fill="oklch(0.78 0.16 155)"/>
+            <circle cx="254" cy="120" r="6" fill="oklch(0.85 0.18 75)"/>
+            <circle cx="268" cy="120" r="6" fill="oklch(0.72 0.14 230)"/>
+            <circle cx="282" cy="120" r="6" fill="oklch(0.68 0.18 300)"/>
+            <!-- slider -->
+            <rect x="94" y="146" width="80" height="4" fill="oklch(0.98 0.005 250)" opacity="0.7"/>
+            <rect x="220" y="148" width="80" height="2" fill="oklch(0.26 0.022 250)"/>
+            <circle cx="252" cy="149" r="4" fill="oklch(0.82 0.15 195)"/>
+            <!-- footer -->
+            <rect x="94" y="168" width="200" height="10" rx="2" fill="oklch(0.21 0.020 250)"/>
+          </svg>
+        </div>
+        <div class="screen-card__body">
+          <span class="screen-card__kind">⊙ Preferences</span>
+          <h3>Helm</h3>
+          <p>Global app behavior, Pi defaults, per-vessel overrides, appearance (palette, density, accent), and keyboard shortcuts.</p>
+          <div class="screen-card__foot">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="6"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+            <span>4 sections · auto-saved</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- ===== BELOW: changelog + tips ===== -->
+    <div class="below">
+
+      <section class="panel-card">
+        <h4>
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v6l4 2"/><circle cx="8" cy="8" r="7"/></svg>
+          What's new in Sea Trials
+        </h4>
+        <ul class="changelog">
+          <li>
+            <span class="tag add">+ NEW</span>
+            <span class="text"><b>Cargo Bay</b> diff view with hunk-level staging — review changes without leaving the bridge.</span>
+          </li>
+          <li>
+            <span class="tag add">+ NEW</span>
+            <span class="text"><b>Set Sail</b> single-action stage + commit + push, with conventional-commit message capture.</span>
+          </li>
+          <li>
+            <span class="tag fix">~ FIX</span>
+            <span class="text">Pi session restart no longer drops the running event stream on <span class="mono">pi-runtime</span>.</span>
+          </li>
+          <li>
+            <span class="tag add">+ NEW</span>
+            <span class="text"><b>Light mode</b> shipped — flip in Helm › Appearance or via the command palette. Dark is still the identity.</span>
+          </li>
+          <li>
+            <span class="tag add">+ NEW</span>
+            <span class="text"><b>Fleet Charts</b> — sessions, spend, and time-on-vessel across 24h/7d/30d, stacked daily and ranked by vessel.</span>
+          </li>
+          <li>
+            <span class="tag add">+ NEW</span>
+            <span class="text"><b>Command palette</b> (<span class="mono">⌘K</span>) — jump screens, switch vessels, flip theme, fire Set Sail.</span>
+          </li>
+          <li>
+            <span class="tag add">+ NEW</span>
+            <span class="text"><b>Vessel Detail</b> — per-vessel deep-dive with 5 tabs (Overview · Sessions · Cargo · Engine · Config), turn-by-turn replay, and per-vessel settings.</span>
+          <li>
+            <span class="tag add">+ NEW</span>
+            <span class="text"><b>Live event stream</b> — Captain's Log now streams events in real time with weighted random generation, pause/resume (Space), rate control, auto-scroll lock, and connection status with simulated latency.</span>
+          </li>
+      </section>
+
+
+      <section class="panel-card">
+        <h4>
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="8" rx="1"/><path d="M4 7h1M7 7h1M10 7h1M4 10h7"/></svg>
+          Bridge shortcuts
+        </h4>
+        <div class="tips">
+          <div class="tip">
+            <span class="keys"><kbd class="kbd">⌘</kbd><kbd class="kbd">K</kbd></span>
+            <span class="text"><b>Command palette</b> — anything in the app, by name.</span>
+          </div>
+          <div class="tip">
+            <span class="keys"><kbd class="kbd">⌘</kbd><kbd class="kbd">F</kbd></span>
+            <span class="text">Search vessels in Fleet · events in Captain's Log.</span>
+          </div>
+          <div class="tip">
+            <span class="keys"><kbd class="kbd">⌘</kbd><kbd class="kbd">↵</kbd></span>
+            <span class="text"><b>Set Sail</b> the current vessel — stage, commit, push.</span>
+          </div>
+          <div class="tip">
+            <span class="keys"><kbd class="kbd">⌘</kbd><kbd class="kbd">,</kbd></span>
+            <span class="text">Open Helm preferences from any view.</span>
+          </div>
+          <div class="tip">
+            <span class="keys"><kbd class="kbd">1</kbd><kbd class="kbd">2</kbd><kbd class="kbd">3</kbd></span>
+            <span class="text">Jump to <b>Fleet</b> · <b>Captain's Log</b> · <b>Helm</b> from anywhere.</span>
+          </div>
+          <div class="tip">
+            <span class="keys"><kbd class="kbd">⌥</kbd><kbd class="kbd">↑</kbd>/<kbd class="kbd">↓</kbd></span>
+            <span class="text">Cycle through vessels in the Fleet panel.</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ========== BOTTOM NAV ========== -->
+  <nav class="bottomnav">
+    <div class="bottomnav__group">
+      <button class="navbtn" aria-current="page">
+        <svg class="ico" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l4 5v8l-4-2-4 2V6l4-5z"/></svg>
+        <span class="lbl">Welcome</span>
+      </button>
+      <a class="navbtn" href="dashboard.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13l2-6 4-3 4 3 2 6z"/><circle cx="8" cy="9" r="1.5"/></svg>
+        <span class="lbl">Fleet</span>
+      </a>
+      <a class="navbtn" href="captains-log.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+        <span class="lbl">Captain's Log</span>
+      </a>
+      <a class="navbtn" href="charts.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M4 11V7M7 11V4M10 11V8M13 11V6"/></svg>
+        <span class="lbl">Charts</span>
+      </a>
+      <a class="navbtn" href="helm.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="6"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+        <span class="lbl">Helm</span>
+      </a>
+    </div>
+    <div class="navmeta">
+      <span><span class="dot"></span>Pi v2.4.1</span>
+      <span class="text-faint">·</span>
+      <span>2 running</span>
+      <span class="text-faint">·</span>
+      <span>$3.42 today / $42.18 mo</span>
+      <span class="text-faint">·</span>
+      <span class="text-dim">press 1 to weigh anchor</span>
+    </div>
+  </nav>
+
+</div>
+
+<script>
+  // 1/2/3 jump shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const map = { '1': 'dashboard.html', '2': 'captains-log.html', '3': 'charts.html', '4': 'helm.html', '5': 'vessel.html?vessel=bridge' };
+    if (map[e.key]) {
+      const card = document.querySelector(`[data-key="${e.key}"]`);
+      if (card) {
+        card.style.transform = 'translateY(-2px) scale(1.01)';
+        card.style.borderColor = 'var(--glow)';
+        card.style.boxShadow = 'var(--glow-md)';
+        setTimeout(() => { window.location.href = map[e.key]; }, 120);
+      }
+    }
+  });
+</script>
+<script src="js/commandPalette.js" defer></script>
+</body>
+</html>

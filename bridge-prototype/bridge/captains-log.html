@@ -1,0 +1,1491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bridge — Captain's Log</title>
+<link rel="stylesheet" href="styles/bridge.css" />
+<script src="js/theme.js"></script>
+<style>
+  /* ===== Captain's Log — page-specific layout ===== */
+  .overlay__main {
+    grid-template-columns: 260px 1fr;
+  }
+  .log-nav {
+    border-right: 1px solid var(--border-base);
+    background: var(--panel);
+    padding: var(--sp-xl) 0 var(--sp-2xl);
+    overflow: auto;
+    min-height: 0;
+    display: flex; flex-direction: column;
+    gap: var(--sp-sm);
+  }
+  .log-nav h3 {
+    margin: 0 var(--sp-xl) var(--sp-md);
+    font-size: 9.5px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 700;
+  }
+  .log-nav h3:not(:first-child) { margin-top: var(--sp-xl); }
+
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-md);
+    padding: 5px var(--sp-xl);
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    transition: color var(--t-fast), background var(--t-fast);
+  }
+  .filter-row:hover { color: var(--foam); background: color-mix(in oklch, var(--deep) 50%, transparent); }
+  .filter-row[aria-checked="true"] {
+    color: var(--foam);
+    background: color-mix(in oklch, var(--glow) 6%, transparent);
+  }
+  .filter-row[aria-checked="true"]::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 5px; bottom: 5px;
+    width: 2px;
+    background: var(--glow);
+    box-shadow: 0 0 8px var(--glow);
+  }
+  .filter-row .swatch {
+    width: 10px; height: 10px; border-radius: 2px;
+    background: var(--mid);
+    border: 1px solid var(--border-base);
+    flex: 0 0 10px;
+  }
+  .filter-row .count {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--dim);
+    background: var(--deep);
+    border: 1px solid var(--border-base);
+    padding: 1px 6px;
+    border-radius: 99px;
+    line-height: 1.5;
+  }
+  .filter-row[aria-checked="true"] .count {
+    color: var(--glow);
+    border-color: var(--border-glow);
+  }
+  .filter-row .ico { width: 13px; height: 13px; flex: 0 0 13px; }
+
+  .filter-section { padding: 0; }
+  .filter-section .small {
+    padding: var(--sp-sm) var(--sp-xl);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .filter-section .small .input {
+    margin-top: 5px;
+  }
+  .filter-actions {
+    display: flex;
+    gap: var(--sp-sm);
+    padding: var(--sp-sm) var(--sp-xl) 0;
+    flex-wrap: wrap;
+  }
+  .pill-toggle {
+    border: 1px solid var(--border-base);
+    background: var(--deep);
+    color: var(--muted);
+    padding: 3px 9px;
+    border-radius: 99px;
+    font-size: 10.5px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    transition: all var(--t-fast);
+  }
+  .pill-toggle:hover { color: var(--foam); border-color: var(--border-raised); }
+  .pill-toggle[aria-pressed="true"] {
+    color: var(--abyss);
+    background: var(--glow);
+    border-color: var(--glow);
+    box-shadow: var(--glow-sm);
+  }
+
+  /* ===== Log content ===== */
+  .log-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--abyss);
+  }
+  .log-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-md);
+    padding: var(--sp-md) var(--sp-2xl);
+    border-bottom: 1px solid var(--border-base);
+    background: linear-gradient(to bottom, color-mix(in oklch, var(--panel) 75%, transparent), transparent);
+    backdrop-filter: blur(8px);
+    flex: 0 0 auto;
+  }
+  .log-toolbar .input { flex: 1; max-width: 480px; }
+  .log-toolbar .right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-md);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--dim);
+  }
+  .log-toolbar .right b { color: var(--glow); font-weight: 600; }
+
+  .timeline {
+    flex: 1;
+    overflow: auto;
+    padding: var(--sp-lg) var(--sp-2xl) var(--sp-3xl);
+    min-height: 0;
+  }
+
+  .daygroup { margin-bottom: var(--sp-2xl); }
+  .daygroup__head {
+    position: sticky;
+    top: -1px;
+    z-index: 5;
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-md);
+    padding: var(--sp-md) 0;
+    background: linear-gradient(to bottom, var(--abyss) 70%, color-mix(in oklch, var(--abyss) 80%, transparent));
+    margin-bottom: var(--sp-md);
+  }
+  .daygroup__head h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: var(--foam);
+    text-transform: uppercase;
+  }
+  .daygroup__head .when {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--dim);
+    letter-spacing: 0.5px;
+  }
+  .daygroup__head .count {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--deep);
+    border: 1px solid var(--border-base);
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+
+  /* ===== Log row (denser than feed item) ===== */
+  .log-row {
+    display: grid;
+    grid-template-columns: 78px 26px 1fr auto;
+    align-items: start;
+    gap: var(--sp-lg);
+    padding: var(--sp-md) var(--sp-lg);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    position: relative;
+    transition: background var(--t-fast);
+  }
+  .log-row:hover {
+    background: color-mix(in oklch, var(--surface) 35%, transparent);
+  }
+  .log-row[data-pinned="true"] {
+    background: color-mix(in oklch, var(--glow) 4%, transparent);
+    box-shadow: inset 2px 0 0 var(--glow);
+  }
+  .log-row + .log-row { border-top: 1px solid color-mix(in oklch, var(--mid) 25%, transparent); }
+
+  .log-row .time {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--muted);
+    line-height: 1.5;
+    padding-top: 3px;
+    letter-spacing: 0.3px;
+  }
+  .log-row .time small { display: block; font-size: 9px; color: var(--faint); letter-spacing: 0.6px; text-transform: uppercase; }
+
+  .log-row .marker {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 11px;
+    background: var(--deep);
+    color: var(--muted);
+    border: 1px solid var(--border-base);
+    margin-top: 1px;
+  }
+  .log-row[data-type="run"]   .marker { color: var(--sea-green);   background: color-mix(in oklch, var(--sea-green) 14%, transparent); border-color: color-mix(in oklch, var(--sea-green) 30%, transparent); }
+  .log-row[data-type="ship"]  .marker { color: var(--glow);        background: color-mix(in oklch, var(--glow) 14%, transparent); border-color: var(--border-glow); }
+  .log-row[data-type="warn"]  .marker { color: var(--brass);       background: color-mix(in oklch, var(--brass) 14%, transparent); border-color: color-mix(in oklch, var(--brass) 30%, transparent); }
+  .log-row[data-type="err"]   .marker { color: var(--alert-red);   background: color-mix(in oklch, var(--alert-red) 14%, transparent); border-color: color-mix(in oklch, var(--alert-red) 30%, transparent); }
+  .log-row[data-type="crew"]  .marker { color: var(--crew-purple); background: color-mix(in oklch, var(--crew-purple) 14%, transparent); border-color: color-mix(in oklch, var(--crew-purple) 30%, transparent); }
+  .log-row[data-type="cargo"] .marker { color: var(--cargo-blue);  background: color-mix(in oklch, var(--cargo-blue) 14%, transparent); border-color: color-mix(in oklch, var(--cargo-blue) 30%, transparent); }
+
+  .log-row .body { min-width: 0; }
+  .log-row .body .msg {
+    color: var(--foam);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .log-row .body .msg b { font-weight: 600; }
+  .log-row .body .meta {
+    display: flex; gap: var(--sp-md); flex-wrap: wrap;
+    margin-top: 3px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--muted);
+    align-items: baseline;
+  }
+  .log-row .body .meta .v {
+    color: var(--foam);
+    background: var(--deep);
+    border: 1px solid var(--border-base);
+    padding: 0 6px;
+    border-radius: 3px;
+  }
+  .log-row .body .meta .br { color: var(--dim); }
+  .log-row .body .meta .sep { color: var(--faint); }
+  .log-row .body .meta .cost { color: var(--brass); }
+  .log-row .body .meta .dur { color: var(--cargo-blue); }
+  .log-row .body .meta .hash {
+    color: var(--muted);
+    background: var(--deep);
+    border: 1px solid var(--border-base);
+    padding: 0 6px;
+    border-radius: 3px;
+  }
+  .log-row .body .meta .skill {
+    color: var(--crew-purple);
+    background: color-mix(in oklch, var(--crew-purple) 8%, transparent);
+    border: 1px solid color-mix(in oklch, var(--crew-purple) 25%, transparent);
+    padding: 0 6px;
+    border-radius: 3px;
+  }
+  .log-row .actions {
+    opacity: 0;
+    display: flex;
+    gap: 2px;
+    transition: opacity var(--t-fast);
+  }
+  .log-row:hover .actions,
+  .log-row[data-pinned="true"] .actions { opacity: 1; }
+  .log-row .actions button {
+    width: 24px; height: 24px;
+    color: var(--dim);
+    border-radius: 4px;
+    display: grid; place-items: center;
+  }
+  .log-row .actions button:hover { color: var(--foam); background: var(--surface); }
+  .log-row .actions button[aria-pressed="true"] { color: var(--glow); }
+
+  /* Detail expansion */
+  .log-row.expanded {
+    background: color-mix(in oklch, var(--surface) 50%, transparent);
+    padding-bottom: var(--sp-xl);
+  }
+  .log-row .detail {
+    grid-column: 3 / 5;
+    margin-top: var(--sp-md);
+    padding: var(--sp-md);
+    background: var(--abyss);
+    border: 1px solid var(--border-base);
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    white-space: pre-wrap;
+    line-height: 1.55;
+    display: none;
+    max-height: 240px;
+    overflow: auto;
+  }
+  .log-row.expanded .detail { display: block; }
+  .log-row .detail .k { color: var(--dim); }
+  .log-row .detail .v2 { color: var(--foam); }
+  .log-row .detail .err { color: var(--alert-red); }
+
+  /* ===== Live stream ===== */
+  .stream-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--sea-green);
+    box-shadow: 0 0 6px var(--sea-green);
+    animation: stream-pulse 2s ease-in-out infinite;
+  }
+  .stream-dot--paused {
+    background: var(--brass);
+    box-shadow: none;
+    animation: none;
+  }
+  .stream-dot--err {
+    background: var(--alert-red);
+    box-shadow: 0 0 6px var(--alert-red);
+    animation: none;
+  }
+  @keyframes stream-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  /* New-row animation */
+  .log-row--new {
+    animation: row-slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  @keyframes row-slide-in {
+    from { opacity: 0; transform: translateY(-12px); background: color-mix(in oklch, var(--glow) 8%, transparent); }
+    to   { opacity: 1; transform: translateY(0); background: unset; }
+  }
+
+  /* Stream controls bar */
+  .stream-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-md);
+    padding: var(--sp-sm) var(--sp-2xl);
+    border-top: 1px solid var(--border-base);
+    background: linear-gradient(to bottom, transparent, color-mix(in oklch, var(--panel) 60%, transparent));
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--dim);
+    flex: 0 0 auto;
+  }
+  .stream-bar .grp {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+  }
+  .stream-bar .grp + .grp::before {
+    content: '';
+    width: 1px; height: 14px;
+    background: var(--border-base);
+    margin-right: var(--sp-md);
+  }
+  .stream-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    padding: 3px 10px;
+    border-radius: 99px;
+    border: 1px solid var(--border-base);
+    background: var(--deep);
+    color: var(--muted);
+    transition: all var(--t-fast);
+    user-select: none;
+  }
+  .stream-toggle:hover { color: var(--foam); border-color: var(--border-raised); }
+  .stream-toggle[aria-pressed='true'] {
+    color: var(--abyss);
+    background: var(--sea-green);
+    border-color: var(--sea-green);
+  }
+  .rate-btn {
+    cursor: pointer;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--dim);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    transition: all var(--t-fast);
+  }
+  .rate-btn:hover { color: var(--foam); }
+  .rate-btn[aria-pressed='true'] {
+    color: var(--glow);
+    background: color-mix(in oklch, var(--glow) 10%, transparent);
+    border-color: var(--border-glow);
+  }
+  .scroll-lock-btn {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 99px;
+    border: 1px solid var(--border-base);
+    background: var(--deep);
+    color: var(--muted);
+    transition: all var(--t-fast);
+  }
+  .scroll-lock-btn:hover { color: var(--foam); border-color: var(--border-raised); }
+  .scroll-lock-btn[aria-pressed='true'] {
+    color: var(--sea-green);
+    border-color: color-mix(in oklch, var(--sea-green) 40%, transparent);
+  }
+  .stat-val { color: var(--foam); font-weight: 600; }
+  .stat-val--green { color: var(--sea-green); }
+
+  /* Scroll-to-bottom FAB */
+  .scroll-fab {
+    position: absolute;
+    bottom: 16px;
+    right: 20px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 99px;
+    border: 1px solid var(--border-base);
+    background: var(--panel);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s ease;
+    pointer-events: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  }
+  .scroll-fab.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .scroll-fab:hover { color: var(--foam); border-color: var(--border-raised); }
+  .scroll-fab .new-badge {
+    background: var(--glow);
+    color: var(--abyss);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 99px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  /* Empty state */
+  .empty {
+  .empty {
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--dim);
+    font-size: 13px;
+  }
+  .empty .ico {
+    width: 56px; height: 56px;
+    color: var(--faint);
+    margin: 0 auto var(--sp-lg);
+    display: block;
+  }
+  .empty h3 {
+    margin: 0 0 var(--sp-sm);
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .empty button { margin-top: var(--sp-lg); }
+
+  /* Vessel swatches */
+  .sw-bridge      { background: oklch(0.72 0.14 230); }
+  .sw-od          { background: oklch(0.82 0.15 195); }
+  .sw-lighthouse  { background: oklch(0.85 0.18 75); }
+  .sw-pi-runtime  { background: oklch(0.65 0.22 25); }
+  .sw-dialysispal { background: oklch(0.78 0.16 155); }
+  .sw-harbor      { background: oklch(0.68 0.18 300); }
+</style>
+</head>
+<body>
+<div class="overlay">
+
+  <!-- ========== TITLE BAR ========== -->
+  <header class="titlebar">
+    <div class="tb-left">
+      <a class="navbtn" href="dashboard.html" style="color: var(--muted); padding: 4px 8px;">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L5 8l5 5"/></svg>
+        <span class="lbl">Back to Fleet</span>
+      </a>
+    </div>
+    <div class="tb-title"><b>CAPTAIN'S LOG</b> · Ship's events across the fleet</div>
+    <div class="tb-right">
+      <span class="tb-pill"><span class="stream-dot" id="stream-dot" title="Connected — simulating live feed"></span><span id="stream-status">Live</span> · <span id="stream-latency">12 ms</span> latency</span>
+    </div>
+  </header>
+
+  <!-- ========== MAIN ========== -->
+  <div class="overlay__main">
+
+    <!-- ========== FILTER SIDEBAR ========== -->
+    <aside class="log-nav">
+
+      <div class="filter-section">
+        <h3>Time range</h3>
+        <div class="filter-actions">
+          <button class="pill-toggle" data-range="1h">1H</button>
+          <button class="pill-toggle" data-range="6h">6H</button>
+          <button class="pill-toggle" aria-pressed="true" data-range="24h">24H</button>
+          <button class="pill-toggle" data-range="7d">7D</button>
+          <button class="pill-toggle" data-range="all">All</button>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <h3>Vessels</h3>
+        <div class="filter-row" data-vessel="all" aria-checked="true">
+          <span class="ico" style="color: var(--glow);">⚓</span>
+          <span>All vessels</span>
+          <span class="count" data-vessel-count="all">—</span>
+        </div>
+        <div class="filter-row" data-vessel="bridge">
+          <span class="swatch sw-bridge"></span>
+          <span>bridge</span>
+          <span class="count" data-vessel-count="bridge">—</span>
+        </div>
+        <div class="filter-row" data-vessel="open-design">
+          <span class="swatch sw-od"></span>
+          <span>open-design</span>
+          <span class="count" data-vessel-count="open-design">—</span>
+        </div>
+        <div class="filter-row" data-vessel="lighthouse">
+          <span class="swatch sw-lighthouse"></span>
+          <span>lighthouse</span>
+          <span class="count" data-vessel-count="lighthouse">—</span>
+        </div>
+        <div class="filter-row" data-vessel="pi-runtime">
+          <span class="swatch sw-pi-runtime"></span>
+          <span>pi-runtime</span>
+          <span class="count" data-vessel-count="pi-runtime">—</span>
+        </div>
+        <div class="filter-row" data-vessel="dialysispal">
+          <span class="swatch sw-dialysispal"></span>
+          <span>dialysisPal</span>
+          <span class="count" data-vessel-count="dialysispal">—</span>
+        </div>
+        <div class="filter-row" data-vessel="harbor">
+          <span class="swatch sw-harbor"></span>
+          <span>harbor</span>
+          <span class="count" data-vessel-count="harbor">—</span>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <h3>Event type</h3>
+        <div class="filter-row" data-type="run" aria-checked="true">
+          <span class="swatch" style="background: var(--sea-green);"></span>
+          <span>Pi session</span>
+          <span class="count" data-type-count="run">—</span>
+        </div>
+        <div class="filter-row" data-type="ship" aria-checked="true">
+          <span class="swatch" style="background: var(--glow);"></span>
+          <span>Set Sail</span>
+          <span class="count" data-type-count="ship">—</span>
+        </div>
+        <div class="filter-row" data-type="crew" aria-checked="true">
+          <span class="swatch" style="background: var(--crew-purple);"></span>
+          <span>Tool call</span>
+          <span class="count" data-type-count="crew">—</span>
+        </div>
+        <div class="filter-row" data-type="cargo" aria-checked="true">
+          <span class="swatch" style="background: var(--cargo-blue);"></span>
+          <span>Cargo / git</span>
+          <span class="count" data-type-count="cargo">—</span>
+        </div>
+        <div class="filter-row" data-type="warn" aria-checked="true">
+          <span class="swatch" style="background: var(--brass);"></span>
+          <span>Warning</span>
+          <span class="count" data-type-count="warn">—</span>
+        </div>
+        <div class="filter-row" data-type="err" aria-checked="true">
+          <span class="swatch" style="background: var(--alert-red);"></span>
+          <span>Error / crash</span>
+          <span class="count" data-type-count="err">—</span>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <h3>Saved views</h3>
+        <div class="filter-row" data-view="errors-today">
+          <span class="ico" style="color: var(--alert-red);">!</span>
+          <span>Errors today</span>
+          <span class="count" id="v-errors">—</span>
+        </div>
+        <div class="filter-row" data-view="set-sails">
+          <span class="ico" style="color: var(--glow);">⚓</span>
+          <span>All Set Sails</span>
+          <span class="count" id="v-sails">—</span>
+        </div>
+        <div class="filter-row" data-view="pinned">
+          <span class="ico" style="color: var(--brass);">★</span>
+          <span>Pinned</span>
+          <span class="count" id="v-pinned">0</span>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ========== LOG CONTENT ========== -->
+    <section class="log-content">
+
+      <div class="log-toolbar">
+        <label class="input mono" style="flex:1; max-width: 520px;">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+          <input type="text" id="search" placeholder="search events, vessels, skills, hashes…" />
+          <kbd class="kbd" style="border-bottom-width:1px; min-width:18px; padding:0 4px;">⌘F</kbd>
+        </label>
+        <div class="right">
+          <span><b id="show-count">0</b> of <span id="total-count">0</span> events</span>
+          <span class="text-faint">·</span>
+          <span>last 24h</span>
+          <span class="text-faint">·</span>
+          <button class="btn btn--ghost btn--sm" id="reset-filters">Reset filters</button>
+          <button class="btn btn--secondary btn--sm">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v10M4 7l4 4 4-4M2 14h12"/></svg>
+            Export
+          </button>
+        </div>
+      </div>
+
+      <div class="timeline" id="timeline" style="position:relative;">
+        <!-- groups injected by JS -->
+        <button class="scroll-fab" id="scroll-fab" aria-label="Scroll to latest">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M4 7l4 4 4-4"/></svg>
+          <span>Latest</span>
+          <span class="new-badge" id="fab-count">0</span>
+        </button>
+      </div>
+
+      <!-- ====== STREAM CONTROLS ====== -->
+      <div class="stream-bar" id="stream-bar">
+        <div class="grp">
+          <button class="stream-toggle" id="stream-toggle" aria-pressed="true" title="Pause/resume stream">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" id="stream-icon"><rect x="4" y="3" width="3" height="10" rx=".5"/><rect x="9" y="3" width="3" height="10" rx=".5"/></svg>
+            <span id="stream-label">Live</span>
+          </button>
+          <span class="text-faint">·</span>
+          <button class="rate-btn" data-rate="slow" aria-pressed="false">Slow</button>
+          <button class="rate-btn" data-rate="normal" aria-pressed="true">Normal</button>
+          <button class="rate-btn" data-rate="fast" aria-pressed="false">Fast</button>
+        </div>
+
+        <div class="grp">
+          <button class="scroll-lock-btn" id="scroll-lock" aria-pressed="true" title="Auto-scroll to new events">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M4 7l4 4 4-4"/><path d="M2 13h12" stroke-dasharray="2 2"/></svg>
+            Auto-scroll
+          </button>
+        </div>
+
+        <div class="grp">
+          <span><span class="stat-val stat-val--green" id="stat-rate">0.0</span> evt/min</span>
+          <span class="text-faint">·</span>
+          <span><span class="stat-val" id="stat-buffer">25</span> buffered</span>
+          <span class="text-faint">·</span>
+          <span><span class="stat-val" id="stat-uptime">00:00</span></span>
+          <span class="text-faint">·</span>
+          <span id="stat-last" style="color:var(--muted)">—</span>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- ========== BOTTOM NAV ========== -->
+  <nav class="bottomnav">
+    <div class="bottomnav__group">
+      <a class="navbtn" href="dashboard.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13l2-6 4-3 4 3 2 6z"/><circle cx="8" cy="9" r="1.5"/></svg>
+        <span class="lbl">Fleet</span>
+      </a>
+      <button class="navbtn" aria-current="page">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+        <span class="lbl">Captain's Log</span>
+      </button>
+      <a class="navbtn" href="charts.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M4 11V7M7 11V4M10 11V8M13 11V6"/></svg>
+        <span class="lbl">Charts</span>
+      </a>
+      <a class="navbtn" href="helm.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="6"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+        <span class="lbl">Helm</span>
+      </a>
+    </div>
+    <div class="navmeta">
+      <span><span class="dot dot--green"></span>Pi v2.4.1</span>
+      <span class="text-faint">·</span>
+      <span>2 running</span>
+      <span class="text-faint">·</span>
+      <span id="nav-events">1,247</span> events stored · ~28 MB
+      <span class="text-faint">·</span>
+      <span id="nav-stream-status" style="color:var(--sea-green)">● Streaming</span>
+      <span class="text-faint">·</span>
+      <span class="text-dim">⌘F search · ⌘E export · Space pause stream</span>
+    </div>
+
+  </nav>
+
+</div>
+
+<script>
+/* ============================================================
+   Captain's Log — data + interactions
+   ============================================================ */
+
+// Seed: realistic events across vessels, last ~24h
+// times: "HH:MM" 24h, day: "today" | "yesterday"
+const EVENTS = [
+  // ---- TODAY 14:xx ----
+  { id: 'e1',  day: 'today', time: '14:30', ms: 14*60+30, vessel: 'bridge',      type: 'run',
+    msg: 'Pi session started on <b>bridge</b> — skill <span class="mono">/a11y-audit</span>',
+    branch: 'main', hash: 'b4f9-7a21', skill: '/a11y-audit', detail: 'session_id=01HW7G… cwd=~/dev/bridge env=tauri-dev pi_version=2.4.1 model=opus-4.7 budget=$0.50'},
+  { id: 'e2',  day: 'today', time: '14:28', ms: 14*60+28, vessel: 'open-design', type: 'crew',
+    msg: 'Pi tool call on <b>open-design</b> — <span class="mono">edit src/lib/agent-browser.ts</span>',
+    branch: 'feat/agent-browser', detail: 'tool=Edit file=src/lib/agent-browser.ts lines_changed=+18/-4 duration=1.2s'},
+  { id: 'e3',  day: 'today', time: '14:25', ms: 14*60+25, vessel: 'dialysispal', type: 'ship',
+    msg: 'Set Sail on <b>dialysisPal</b> — pushed <span class="mono">a4d12e</span> to origin/develop',
+    branch: 'develop', diff: '+6/-2', hash: 'a4d12e', detail: 'remote=origin/develop hooks: pre-commit ✓ pre-push ✓ files=3 size=2.4 KB'},
+  { id: 'e4',  day: 'today', time: '14:21', ms: 14*60+21, vessel: 'lighthouse',  type: 'warn',
+    msg: 'Build failed on <b>lighthouse</b> — <span class="mono">vite: cannot resolve \'@/lib/track\'</span>',
+    branch: 'main', detail: 'build step 7/14 elapsed=12.4s\n— vite v5.4.10\n— ✘ [ERROR] Could not resolve "@/lib/track"\n    src/pages/index.astro:12:21\n    The path "@/lib/track" couldn\'t be resolved.'},
+  { id: 'e5',  day: 'today', time: '14:18', ms: 14*60+18, vessel: 'pi-runtime',  type: 'err',
+    msg: 'Pi crashed on <b>pi-runtime</b> — event parser panic at line 142',
+    branch: 'bugfix/event-stream', detail: 'exit_code=137\nthread \'main\' panicked at \'unexpected token in event stream\', src/parser.rs:142:9\nnote: run with `RUST_BACKTRACE=1` for a backtrace\n   0: pi_runtime::parser::next_event\n   1: pi_runtime::session::tick'},
+  { id: 'e6',  day: 'today', time: '14:15', ms: 14*60+15, vessel: 'bridge',      type: 'run',
+    msg: 'Pi session ended on <b>bridge</b> — 4 tools, $0.18, success',
+    branch: 'main', cost: '$0.18', dur: '12m 04s', detail: 'session_id=aa12-19c4 result=ok tools_used=4 input_tokens=18420 output_tokens=3211 cost=$0.18 duration=12m04s'},
+  { id: 'e7',  day: 'today', time: '13:58', ms: 13*60+58, vessel: 'open-design', type: 'cargo',
+    msg: 'Cargo updated on <b>open-design</b> — 12 files modified, 2 new',
+    branch: 'feat/agent-browser', diff: '+217/-89', detail: 'changed=12 added=2 removed=0 lines=+217/-89'},
+  { id: 'e8',  day: 'today', time: '13:42', ms: 13*60+42, vessel: 'bridge',      type: 'crew',
+    msg: 'Pi tool call on <b>bridge</b> — <span class="mono">read AGENTS.md</span>',
+    branch: 'main', detail: 'tool=Read file=AGENTS.md bytes=8421 duration=0.04s'},
+  { id: 'e9',  day: 'today', time: '13:30', ms: 13*60+30, vessel: 'harbor',      type: 'run',
+    msg: 'Pi session started on <b>harbor</b> — skill <span class="mono">/refactor</span>',
+    branch: 'feat/scheduler', skill: '/refactor', detail: 'cwd=~/dev/harbor model=opus-4.7 budget=$1.00'},
+  { id: 'e10', day: 'today', time: '13:12', ms: 13*60+12, vessel: 'lighthouse',  type: 'ship',
+    msg: 'Set Sail on <b>lighthouse</b> — pushed <span class="mono">e7b21c</span> to origin/main',
+    branch: 'main', diff: '+42/-17', hash: 'e7b21c', detail: 'remote=origin/main hooks: pre-commit ✓ pre-push ✓ files=5'},
+  { id: 'e11', day: 'today', time: '12:48', ms: 12*60+48, vessel: 'pi-runtime',  type: 'warn',
+    msg: 'Slow test on <b>pi-runtime</b> — <span class="mono">stream::backpressure</span> took 8.2s',
+    branch: 'bugfix/event-stream', dur: '8.2s', detail: 'threshold=5s test=tests/stream.rs:241 actual=8.2s p95_baseline=1.4s'},
+  { id: 'e12', day: 'today', time: '12:31', ms: 12*60+31, vessel: 'dialysispal', type: 'crew',
+    msg: 'Pi tool call on <b>dialysisPal</b> — <span class="mono">bash xcrun simctl ...</span>',
+    branch: 'develop', detail: 'tool=Bash cmd=xcrun simctl boot "iPhone 15 Pro" exit=0 duration=4.1s'},
+  { id: 'e13', day: 'today', time: '11:58', ms: 11*60+58, vessel: 'open-design', type: 'run',
+    msg: 'Pi session ended on <b>open-design</b> — 18 tools, $1.24, success',
+    branch: 'feat/agent-browser', cost: '$1.24', dur: '32m 17s', detail: 'session_id=db44-7714 result=ok tools=18 cost=$1.24 duration=32m17s'},
+  { id: 'e14', day: 'today', time: '11:20', ms: 11*60+20, vessel: 'bridge',      type: 'ship',
+    msg: 'Set Sail on <b>bridge</b> — pushed <span class="mono">9c2117</span> to origin/main',
+    branch: 'main', diff: '+128/-44', hash: '9c2117', detail: 'remote=origin/main hooks: pre-commit ✓ pre-push ✓ files=11'},
+  { id: 'e15', day: 'today', time: '10:42', ms: 10*60+42, vessel: 'lighthouse',  type: 'cargo',
+    msg: 'Cargo updated on <b>lighthouse</b> — 4 files modified',
+    branch: 'main', diff: '+18/-9', detail: 'changed=4 added=0 removed=0'},
+  { id: 'e16', day: 'today', time: '09:14', ms: 9*60+14,  vessel: 'harbor',      type: 'err',
+    msg: 'Pi crashed on <b>harbor</b> — context window exhausted at 198k tokens',
+    branch: 'feat/scheduler', detail: 'cause=context_overflow used=198320/200000 tokens session_id=cc92-1144'},
+  { id: 'e17', day: 'today', time: '08:30', ms: 8*60+30,  vessel: 'pi-runtime',  type: 'run',
+    msg: 'Pi session started on <b>pi-runtime</b> — skill <span class="mono">/test-driven</span>',
+    branch: 'bugfix/event-stream', skill: '/test-driven', detail: 'model=opus-4.7 cwd=~/dev/pi-runtime'},
+
+  // ---- YESTERDAY 22:xx → 09:xx ----
+  { id: 'e18', day: 'yesterday', time: '23:47', ms: 23*60+47, vessel: 'bridge', type: 'ship',
+    msg: 'Set Sail on <b>bridge</b> — pushed <span class="mono">5fa20b</span> to origin/main',
+    branch: 'main', diff: '+47/-12', hash: '5fa20b', detail: 'late-night push, hooks ✓'},
+  { id: 'e19', day: 'yesterday', time: '23:12', ms: 23*60+12, vessel: 'bridge', type: 'run',
+    msg: 'Pi session ended on <b>bridge</b> — 22 tools, $2.84, success',
+    branch: 'main', cost: '$2.84', dur: '1h 14m', detail: 'long session — bridge titlebar + tabs redesign'},
+  { id: 'e20', day: 'yesterday', time: '21:58', ms: 21*60+58, vessel: 'open-design', type: 'ship',
+    msg: 'Set Sail on <b>open-design</b> — pushed <span class="mono">3b88f2</span> to origin/feat/agent-browser',
+    branch: 'feat/agent-browser', diff: '+312/-58', hash: '3b88f2', detail: 'large feature commit'},
+  { id: 'e21', day: 'yesterday', time: '20:14', ms: 20*60+14, vessel: 'dialysispal', type: 'warn',
+    msg: 'Test flake on <b>dialysisPal</b> — <span class="mono">SessionTimerTests.testPause</span> intermittent',
+    branch: 'develop', detail: 'observed_failures=3/10 baseline=0/10 last_pass=2d ago'},
+  { id: 'e22', day: 'yesterday', time: '19:47', ms: 19*60+47, vessel: 'lighthouse', type: 'crew',
+    msg: 'Pi tool call on <b>lighthouse</b> — <span class="mono">write src/lib/track.ts</span>',
+    branch: 'main', detail: 'tool=Write file=src/lib/track.ts size=1.2 KB'},
+  { id: 'e23', day: 'yesterday', time: '18:30', ms: 18*60+30, vessel: 'harbor',     type: 'run',
+    msg: 'Pi session started on <b>harbor</b> — skill <span class="mono">/explore</span>',
+    branch: 'feat/scheduler', skill: '/explore', detail: 'exploratory read-only session'},
+  { id: 'e24', day: 'yesterday', time: '17:02', ms: 17*60+2,  vessel: 'pi-runtime', type: 'err',
+    msg: 'Pi crashed on <b>pi-runtime</b> — segfault in <span class="mono">tokio::runtime</span>',
+    branch: 'bugfix/event-stream', detail: 'exit=139 signal=SEGV core_dumped=true reproducer=cargo test --release'},
+  { id: 'e25', day: 'yesterday', time: '16:15', ms: 16*60+15, vessel: 'bridge',     type: 'cargo',
+    msg: 'Cargo cleaned on <b>bridge</b> — 0 files modified, working tree clean',
+    branch: 'main', detail: 'after Set Sail · all changes committed'},
+];
+
+// Set initial pinned (Set Sail on bridge today gets pinned for demo)
+const PINNED = new Set(['e14']);
+
+const TIME_RANGES = {
+  '1h':  60,
+  '6h':  6*60,
+  '24h': 24*60,
+  '7d':  Infinity,
+  'all': Infinity,
+};
+
+// State
+const state = {
+  search: '',
+  vessel: 'all',                 // single
+  types:  new Set(['run','ship','crew','cargo','warn','err']),
+  range:  '24h',
+  view:   null,                  // null | 'errors-today' | 'set-sails' | 'pinned'
+  expanded: new Set(),
+};
+
+// ---- counts ----
+function recountSidebar() {
+  const all = EVENTS.length;
+  document.querySelector('[data-vessel-count="all"]').textContent = all;
+  ['bridge','open-design','lighthouse','pi-runtime','dialysispal','harbor'].forEach(v => {
+    const c = EVENTS.filter(e => e.vessel === v).length;
+    document.querySelector(`[data-vessel-count="${v}"]`).textContent = c;
+  });
+  ['run','ship','crew','cargo','warn','err'].forEach(t => {
+    const c = EVENTS.filter(e => e.type === t).length;
+    document.querySelector(`[data-type-count="${t}"]`).textContent = c;
+  });
+  document.getElementById('v-errors').textContent = EVENTS.filter(e => e.type === 'err' && e.day === 'today').length;
+  document.getElementById('v-sails').textContent  = EVENTS.filter(e => e.type === 'ship').length;
+  document.getElementById('v-pinned').textContent = PINNED.size;
+  document.getElementById('total-count').textContent = all;
+}
+
+// ---- filtering ----
+function passes(e) {
+  if (state.view === 'errors-today') { if (!(e.type === 'err' && e.day === 'today')) return false; }
+  if (state.view === 'set-sails')    { if (e.type !== 'ship') return false; }
+  if (state.view === 'pinned')       { if (!PINNED.has(e.id)) return false; }
+
+  if (state.vessel !== 'all' && e.vessel !== state.vessel) return false;
+  if (!state.types.has(e.type)) return false;
+
+  if (state.range !== 'all' && state.range !== '7d') {
+    if (e.day !== 'today') return false;
+    const cutoff = (14*60 + 30) - TIME_RANGES[state.range]; // demo "now" = 14:30
+    if (e.ms < cutoff) return false;
+  }
+
+  if (state.search) {
+    const s = state.search.toLowerCase();
+    const blob = (e.msg + ' ' + e.vessel + ' ' + (e.branch||'') + ' ' + (e.hash||'') + ' ' + (e.skill||'') + ' ' + (e.detail||'')).toLowerCase();
+    if (!blob.includes(s)) return false;
+  }
+  return true;
+}
+
+// ---- render ----
+function render() {
+  const tl = document.getElementById('timeline');
+  const visible = EVENTS.filter(passes);
+  document.getElementById('show-count').textContent = visible.length;
+
+  if (visible.length === 0) {
+    tl.innerHTML = `
+      <div class="empty">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
+          <circle cx="8" cy="8" r="6.5"/><path d="M5.5 9.5c.6.7 1.4 1.2 2.5 1.2s1.9-.5 2.5-1.2M6 6.5h.01M10 6.5h.01"/>
+        </svg>
+        <h3>No events match these filters</h3>
+        <p>Try widening the time range or clearing the search.</p>
+        <button class="btn btn--secondary btn--sm" onclick="resetFilters()">Reset filters</button>
+      </div>
+    `;
+    return;
+  }
+
+  // group by day
+  const byDay = { today: [], yesterday: [] };
+  visible.forEach(e => byDay[e.day].push(e));
+
+  let html = '';
+  const dayLabels = {
+    today:     { name: 'Today',     date: 'Thu · 22 May 2026' },
+    yesterday: { name: 'Yesterday', date: 'Wed · 21 May 2026' },
+  };
+
+  for (const day of ['today','yesterday']) {
+    const list = byDay[day];
+    if (!list.length) continue;
+    html += `<section class="daygroup">
+      <header class="daygroup__head">
+        <h2>${dayLabels[day].name}</h2>
+        <span class="when">${dayLabels[day].date}</span>
+        <span class="count">${list.length} ${list.length === 1 ? 'event' : 'events'}</span>
+      </header>`;
+
+    for (const e of list) {
+      const isPinned = PINNED.has(e.id);
+      const isExpanded = state.expanded.has(e.id);
+      const markerChar = ({ run:'●', ship:'⚓', crew:'∿', cargo:'◇', warn:'!', err:'×' })[e.type];
+      const metaParts = [`<span class="v">${e.vessel}</span>`];
+      if (e.branch) metaParts.push(`<span class="br">⌥ ${e.branch}</span>`);
+      if (e.hash)   metaParts.push(`<span class="hash">${e.hash}</span>`);
+      if (e.diff)   metaParts.push(`<span class="sep">·</span><span class="mono">${e.diff}</span>`);
+      if (e.skill)  metaParts.push(`<span class="skill">${e.skill}</span>`);
+      if (e.cost)   metaParts.push(`<span class="sep">·</span><span class="cost">${e.cost}</span>`);
+      if (e.dur)    metaParts.push(`<span class="sep">·</span><span class="dur">${e.dur}</span>`);
+
+      const detailLines = (e.detail || '').split('\n').map(line =>
+        line.replace(/^(\S+?)=(.+)$/g, '<span class="k">$1</span>=<span class="v2">$2</span>')
+            .replace(/^(— |✘ |panic)/g, '<span class="err">$1</span>')
+      ).join('\n');
+
+      html += `<article class="log-row ${isExpanded ? 'expanded' : ''}" data-type="${e.type}" data-id="${e.id}" data-pinned="${isPinned}">
+        <div class="time">${e.time}<small>${e.day === 'today' ? 'today' : 'yest.'}</small></div>
+        <div class="marker">${markerChar}</div>
+        <div class="body">
+          <div class="msg">${e.msg}</div>
+          <div class="meta">${metaParts.join(' ')}</div>
+        </div>
+        <div class="actions">
+          <button title="Pin" class="pin-btn" aria-pressed="${isPinned}" data-action="pin">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="${isPinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.4"><path d="M8 1l1.6 4.2L14 6l-3.2 2.8L11.6 13 8 10.7 4.4 13l.8-4.2L2 6l4.4-.8z"/></svg>
+          </button>
+          <button title="Copy details" data-action="copy">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="9" height="11" rx="1"/><path d="M5 1h7v9"/></svg>
+          </button>
+          <button title="Open vessel" data-action="open">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 3h7v7M13 3L7 9M3 6v7h7"/></svg>
+          </button>
+        </div>
+        ${isExpanded ? `<pre class="detail">${detailLines}</pre>` : ''}
+      </article>`;
+    }
+    html += `</section>`;
+  }
+
+  tl.innerHTML = html;
+}
+
+// ---- interactions ----
+function resetFilters() {
+  state.search = '';
+  state.vessel = 'all';
+  state.types  = new Set(['run','ship','crew','cargo','warn','err']);
+  state.range  = '24h';
+  state.view   = null;
+  document.getElementById('search').value = '';
+  document.querySelectorAll('[data-vessel]').forEach(el => el.setAttribute('aria-checked', el.dataset.vessel === 'all' ? 'true' : 'false'));
+  document.querySelectorAll('[data-type]').forEach(el => el.setAttribute('aria-checked', 'true'));
+  document.querySelectorAll('[data-view]').forEach(el => el.setAttribute('aria-checked', 'false'));
+  document.querySelectorAll('[data-range]').forEach(el => el.setAttribute('aria-pressed', el.dataset.range === '24h' ? 'true' : 'false'));
+  render();
+}
+window.resetFilters = resetFilters;
+
+document.getElementById('reset-filters').addEventListener('click', resetFilters);
+
+document.getElementById('search').addEventListener('input', (e) => {
+  state.search = e.target.value.trim();
+  render();
+});
+
+// vessel radios
+document.querySelectorAll('[data-vessel]').forEach(el => {
+  el.addEventListener('click', () => {
+    state.vessel = el.dataset.vessel;
+    state.view = null;
+    document.querySelectorAll('[data-vessel]').forEach(x => x.setAttribute('aria-checked', x === el ? 'true' : 'false'));
+    document.querySelectorAll('[data-view]').forEach(x => x.setAttribute('aria-checked', 'false'));
+    render();
+  });
+});
+
+// type checkboxes (toggle, but cmd-click = solo)
+document.querySelectorAll('[data-type]').forEach(el => {
+  el.addEventListener('click', (ev) => {
+    const t = el.dataset.type;
+    if (ev.metaKey || ev.altKey) {
+      state.types = new Set([t]);
+      document.querySelectorAll('[data-type]').forEach(x => x.setAttribute('aria-checked', x === el ? 'true' : 'false'));
+    } else {
+      if (state.types.has(t)) state.types.delete(t); else state.types.add(t);
+      el.setAttribute('aria-checked', state.types.has(t) ? 'true' : 'false');
+    }
+    state.view = null;
+    document.querySelectorAll('[data-view]').forEach(x => x.setAttribute('aria-checked', 'false'));
+    render();
+  });
+});
+
+// saved views
+document.querySelectorAll('[data-view]').forEach(el => {
+  el.addEventListener('click', () => {
+    state.view = el.dataset.view;
+    document.querySelectorAll('[data-view]').forEach(x => x.setAttribute('aria-checked', x === el ? 'true' : 'false'));
+    document.querySelectorAll('[data-vessel]').forEach(x => x.setAttribute('aria-checked', x.dataset.vessel === 'all' ? 'true' : 'false'));
+    state.vessel = 'all';
+    render();
+  });
+});
+
+// time range pills
+document.querySelectorAll('[data-range]').forEach(el => {
+  el.addEventListener('click', () => {
+    state.range = el.dataset.range;
+    document.querySelectorAll('[data-range]').forEach(x => x.setAttribute('aria-pressed', x === el ? 'true' : 'false'));
+    render();
+  });
+});
+
+// timeline delegation: expand row, pin button, copy
+document.getElementById('timeline').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('[data-action]');
+  const row = ev.target.closest('.log-row');
+  if (!row) return;
+  const id  = row.dataset.id;
+
+  if (btn) {
+    ev.stopPropagation();
+    if (btn.dataset.action === 'pin') {
+      if (PINNED.has(id)) PINNED.delete(id); else PINNED.add(id);
+      document.getElementById('v-pinned').textContent = PINNED.size;
+      render();
+    } else if (btn.dataset.action === 'copy') {
+      const e = EVENTS.find(x => x.id === id);
+      const txt = `${e.time} · ${e.vessel} · ${e.type}\n${e.msg.replace(/<[^>]+>/g,'')}\n${(e.detail||'')}`;
+      navigator.clipboard?.writeText(txt);
+      btn.style.color = 'var(--sea-green)';
+      setTimeout(() => btn.style.color = '', 700);
+    } else if (btn.dataset.action === 'open') {
+      // demo: jump to dashboard with vessel hint
+      window.location.href = 'dashboard.html#vessel=' + encodeURIComponent(EVENTS.find(x => x.id === id).vessel);
+    }
+    return;
+  }
+
+  if (state.expanded.has(id)) state.expanded.delete(id); else state.expanded.add(id);
+  render();
+});
+
+// search shortcut
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+    e.preventDefault();
+    document.getElementById('search').focus();
+    document.getElementById('search').select();
+  } else if (e.key === 'Escape') {
+    if (document.activeElement?.id === 'search') {
+      document.getElementById('search').value = '';
+      state.search = '';
+      render();
+      document.activeElement.blur();
+    }
+  } else if (e.code === 'Space' && !['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)) {
+    e.preventDefault();
+    document.getElementById('stream-toggle').click();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+    e.preventDefault();
+    document.getElementById('search').focus();
+    document.getElementById('search').select();
+  } else if (e.key === 'Escape') {
+    if (document.activeElement?.id === 'search') {
+      document.getElementById('search').value = '';
+      state.search = '';
+      render();
+      document.activeElement.blur();
+    }
+  }
+});
+
+
+/* ============================================================
+   StreamSimulator — real-time event feed
+   Simulates a WebSocket that pushes events into the timeline.
+   Weighted random generation, pause/resume, rate control,
+   auto-scroll lock, connection status with latency.
+   ============================================================ */
+
+(function () {
+  'use strict';
+
+  // ---- event generator templates ----
+
+  var VESSELS = ['bridge','open-design','lighthouse','pi-runtime','dialysispal','harbor'];
+  var BRANCHES = {
+    bridge:'main', 'open-design':'feat/agent-browser', lighthouse:'main',
+    'pi-runtime':'bugfix/event-stream', 'dialysispal':'develop', harbor:'feat/scheduler'
+  };
+  var SKILLS = ['/a11y-audit','/refactor','/test-driven','/explore','/diagnose','/tdd','/commit','/review'];
+  var TOOLS = ['read','edit','write','bash','grep','fetch','search','git'];
+  var FILES = [
+    'src/lib/agent.ts','src/components/Header.tsx','src/styles/tokens.css',
+    'Cargo.toml','src/parser.rs','src/session.rs','tests/stream.rs',
+    'lib/hooks.ts','app/routes/index.ts','components/Sidebar.tsx',
+    'README.md','.env.example','tsconfig.json'
+  ];
+
+  // Weighted type distribution (must sum to ~100)
+  var TYPE_WEIGHTS = [
+    { type: 'crew',  weight: 38 },   // tool calls — most frequent
+    { type: 'run',   weight: 18 },   // session start/end
+    { type: 'cargo', weight: 14 },   // git changes
+    { type: 'ship',  weight: 12 },   // Set Sail
+    { type: 'warn',  weight: 10 },   // warnings
+    { type: 'err',   weight: 8 },    // errors/crashes
+  ];
+  var TOTAL_WEIGHT = TYPE_WEIGHTS.reduce(function(s,t){return s+t.weight;},0);
+
+  function pickType() {
+    var r = Math.random() * TOTAL_WEIGHT;
+    var c = 0;
+    for (var i=0;i<TYPE_WEIGHTS.length;i++) {
+      c += TYPE_WEIGHTS[i].weight;
+      if (r < c) return TYPE_WEIGHTS[i].type;
+    }
+    return 'crew';
+  }
+
+  function pick(arr) { return arr[(Math.random()*arr.length)|0]; }
+  function randInt(a,b) { return a+((Math.random()*(b-a+1))|0); }
+  function pickVessel() { return pick(VESSELS); }
+
+  // ---- realistic message generators per type ----
+
+  function genEvent(id) {
+    var type = pickType();
+    var vessel = pickVessel();
+    var branch = BRANCHES[vessel] || 'main';
+    var now = new Date();
+    var hh = String(now.getHours()).padStart(2,'0');
+    var mm = String(now.getMinutes()).padStart(2,'0');
+    var time = hh+':'+mm;
+    var ms = now.getHours()*60+now.getMinutes();
+
+    switch(type) {
+      case 'crew': {
+        var tool = pick(TOOLS);
+        var file = pick(FILES);
+        var dur = (Math.random()*4+0.2).toFixed(1)+'s';
+        return {
+          id:id, day:'today', time:time, ms:ms,
+          vessel:vessel, type:'crew',
+          msg:'Pi tool call on <b>'+vessel+'</b> — <span class="mono">'+tool+' '+file+'</span>',
+          branch:branch,
+          detail:'tool='+tool.charAt(0).toUpperCase()+tool.slice(1)+' file='+file+' duration='+dur
+        };
+      }
+      case 'run': {
+        var isEnd = Math.random()>0.5;
+        var skill = pick(SKILLS);
+        if(isEnd) {
+          var tools=randInt(3,22), cost=(Math.random()*3+0.05).toFixed(2);
+          var mins=randInt(2,45), secs=randInt(0,59);
+          return {
+            id:id, day:'today', time:time, ms:ms,
+            vessel:vessel, type:'run',
+            msg:'Pi session ended on <b>'+vessel+'</b> — '+tools+' tools, $'+cost+', success',
+            branch:branch, cost:'$'+cost, dur:mins+'m '+String(secs).padStart(2,'0')+'s',
+            detail:'session_id='+(id.slice(0,6))+'-'+(id.slice(6,10)).toUpperCase()+' result=ok tools_used='+tools+' cost=$'+cost+' duration='+mins+'m'+secs+'s'
+          };
+        } else {
+          return {
+            id:id, day:'today', time:time, ms:ms,
+            vessel:vessel, type:'run',
+            msg:'Pi session started on <b>'+vessel+'</b> — skill <span class="mono">'+skill+'</span>',
+            branch:branch, skill:skill,
+            detail:'cwd=~/'+vessel.replace('-','')+' model=opus-4.7 budget=$'+(Math.random()*2+0.1).toFixed(2)
+          };
+        }
+      }
+      case 'cargo': {
+        var files=randInt(1,8);
+        var add=randInt(5,120), del=randInt(0,60);
+        return {
+          id:id, day:'today', time:time, ms:ms,
+          vessel:vessel, type:'cargo',
+          msg:'Cargo updated on <b>'+vessel+'</b> — '+files+' file'+(files===1?'':'s')+' modified',
+          branch:branch, diff:'+'+add+'/−'+del, detail:'changed='+files+' added='+(add>3?randInt(0,2):0)+' removed='+(del>0?randInt(0,1):0)+' lines=+'+add+'/−'+del
+        };
+      }
+      case 'ship': {
+        var hash=''+pick('abcdef0123456789')+pick('abcdef0123456789')+pick('abcdef0123456789')+pick('abcdef0123456789')+pick('abcdef0123456789');
+        var remote='origin/'+(branch==='main'?'main':branch);
+        return {
+          id:id, day:'today', time:time, ms:ms,
+          vessel:vessel, type:'ship',
+          msg:'Set Sail on <b>'+vessel+'</b> — pushed <span class="mono">'+hash+'</span> to '+remote,
+          branch:branch, diff:'+'+randInt(2,80)+'/−'+randInt(0,30), hash:hash, detail:'remote='+remote+' hooks: pre-commit ✓ pre-push ✓ files='+randInt(1,9),
+        };
+      }
+      case 'warn': {
+        var warns=[
+          'Build slow on <b>'+vessel+'</b> — <span class="mono">compile</span> took '+(Math.random()*15+5).toFixed(1)+'s',
+          'Memory high on <b>'+vessel+'</b> — heap at '+(Math.random()*40+60).toFixed(0)+'% of limit',
+          'Rate limit approaching on <b>'+vessel+'</b> — '+(Math.random()*90+10).toFixed(0)+'% of RPM budget used',
+          'Stale session detected on <b>'+vessel+'</b> — idle for '+(Math.random()*20+5).toFixed(0)+'min',
+          'Disk usage warning — <b>'+vessel+'</b> working dir at '+(Math.random()*30+70).toFixed(0)+'%',
+        ];
+        return { id:id, day:'today', time:time, ms:ms, vessel:vessel, type:'warn', msg:pick(warns), branch:branch, detail:'' };
+      }
+      case 'err': {
+        var errs=[
+          'Pi crashed on <b>'+vessel+'</b> — context window exhausted at '+(randInt(120000,198000)).toLocaleString()+' tokens',
+          'Build failed on <b>'+vessel+'</b> — <span class="mono">cannot resolve module</span>',
+          'Pi crashed on <b>'+vessel+'</b> — OOM killed (signal 9), peak RSS '+(Math.random()*500+200).toFixed(0)+' MB',
+          'Test suite crashed on <b>'+vessel+'</b> — '+(randInt(1,12))+' assertion failures in <span class="mono">'+pick(FILES)+'</span>',
+          'Connection lost to <b>'+vessel+'</b> — Tauri IPC channel closed unexpectedly',
+        ];
+        return { id:id, day:'today', time:time, ms:ms, vessel:vessel, type:'err', msg:pick(errs), branch:branch, detail:'exit_code='+(Math.random()>0.5?137:1) };
+      }
+    }
+    return { id:id, day:'today', time:time, ms:ms, vessel:vessel, type:'run', msg:'?', branch:'', detail:'' };
+  }
+
+  // ---- state ----
+
+  var running = true;
+  var rate = 'normal';           // slow | normal | fast
+  var RATE_MS = { slow: 8000, normal: 3500, fast: 1200 };
+  var timer = null;
+  var seq = EVENTS.length + 1;
+  var evtCount = 0;
+  var startTime = Date.now();
+  var lastEvtTime = null;
+  var scrollLocked = true;
+  var pendingNew = 0;       // events arrived while scrolled up
+  var reconnectTimer = null;
+  var connected = true;
+
+  // ---- DOM refs ----
+
+  var dot     = document.getElementById('stream-dot');
+  var status  = document.getElementById('stream-status');
+  var latency = document.getElementById('stream-latency');
+  var toggle  = document.getElementById('stream-toggle');
+  var label   = document.getElementById('stream-label');
+  var icon    = document.getElementById('stream-icon');
+  var fab      = document.getElementById('scroll-fab');
+  var fabCount = document.getElementById('fab-count');
+  var lockBtn  = document.getElementById('scroll-lock');
+  var statRate   = document.getElementById('stat-rate');
+  var statBuffer = document.getElementById('stat-buffer');
+  var statUptime = document.getElementById('stat-uptime');
+  var statLast   = document.getElementById('stat-last');
+  var timeline  = document.getElementById('timeline');
+
+  // ---- latency simulation ----
+
+  function updateLatency() {
+    if (!connected || !running) return;
+    var l = 8 + Math.floor(Math.random() * 28);  // 8–35ms
+    latency.textContent = l + ' ms';
+  }
+  setInterval(updateLatency, 2000 + Math.random()*1500);
+
+  // ---- reconnect simulation (occasional blip) ----
+
+  function simulateReconnect() {
+    if (!running) return;
+    // 3% chance every 15s of a brief disconnect
+    if (Math.random() > 0.97) {
+      setConnected(false);
+      setTimeout(function(){ setConnected(true); }, 1200 + Math.random()*2000);
+    }
+  }
+  setInterval(simulateReconnect, 15000);
+
+  function setConnected(ok) {
+    connected = ok;
+    dot.className = ok ? 'stream-dot' : (running ? 'stream-dot--err' : 'stream-dot--paused');
+    status.textContent = ok ? 'Live' : (running ? 'Reconnecting…' : 'Paused');
+    status.style.color = ok ? 'var(--sea-green)' : (running ? 'var(--alert-red)' : 'var(--brass)');
+    if (!ok && running) {
+      latency.textContent = '—';
+    }
+  }
+
+  // ---- core: push an event ----
+
+  function pushEvent() {
+    if (!running) return;
+
+    var id = 'live-'+String(seq++);
+    var evt = genEvent(id);
+
+    // prepend to EVENTS array (newest first within today)
+    var todayIdx = EVENTS.findIndex(function(e){ return e.day !== 'today'; });
+    if (todayIdx === -1) todayIdx = EVENTS.length;
+    EVENTS.splice(todayIdx, 0, evt);
+    evtCount++;
+    lastEvtTime = new Date();
+
+    // update counts
+    document.getElementById('total-count').textContent = EVENTS.length;
+    recountSidebar();
+    // update nav bar
+    var navEvt = document.getElementById('nav-events');
+    if (navEvt) navEvt.textContent = (1247 + evtCount).toLocaleString();
+
+
+    // render & animate new row
+    render();
+    markNewRow(id);
+
+    // auto-scroll if locked
+    if (scrollLocked) {
+      scrollToBottom();
+    } else {
+      pendingNew++;
+      updateFab();
+    }
+
+    // update stats
+    updateStats();
+  }
+
+  function markNewRow(id) {
+    requestAnimationFrame(function() {
+      var row = timeline.querySelector('[data-id="'+id+'"]');
+      if (row) {
+        row.classList.add('log-row--new');
+        row.addEventListener('animationend', function() {
+          row.classList.remove('log-row--new');
+        }, {once:true});
+      }
+    });
+  }
+
+  // ---- scroll management ----
+
+  function scrollToBottom() {
+    timeline.scrollTop = timeline.scrollHeight - timeline.clientHeight;
+  }
+
+  function isAtBottom() {
+    return timeline.scrollHeight - timeline.clientHeight - timeline.scrollTop < 60;
+  }
+
+  function updateFab() {
+    if (pendingNew > 0) {
+      fab.classList.add('visible');
+      fabCount.textContent = pendingNew;
+    } else {
+      fab.classList.remove('visible');
+    }
+  }
+
+  timeline.addEventListener('scroll', function() {
+    if (isAtBottom()) {
+      scrollLocked = true;
+      pendingNew = 0;
+      lockBtn.setAttribute('aria-pressed', 'true');
+      updateFab();
+    } else if (scrollLocked) {
+      scrollLocked = false;
+      lockBtn.setAttribute('aria-pressed', 'false');
+    }
+  });
+
+  fab.addEventListener('click', function() {
+    scrollToBottom();
+    scrollLocked = true;
+    pendingNew = 0;
+    lockBtn.setAttribute('aria-pressed', 'true');
+    updateFab();
+  });
+
+  lockBtn.addEventListener('click', function() {
+    scrollLocked = !scrollLocked;
+    lockBtn.setAttribute('aria-pressed', String(scrollLocked));
+    if (scrollLocked) { pendingNew = 0; updateFab(); scrollToBottom(); }
+  });
+
+  // ---- stats ----
+
+  function updateStats() {
+    var elapsed = (Date.now() - startTime) / 1000;  // seconds
+    var rpm = elapsed > 0 ? (evtCount / elapsed * 60) : 0;
+    statRate.textContent = rpm.toFixed(1);
+    statBuffer.textContent = EVENTS.length;
+    statUptime.textContent = formatUptime(elapsed);
+    if (lastEvtTime) {
+      statLast.textContent = lastEvtTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    }
+  }
+
+  function formatUptime(sec) {
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = Math.floor(sec % 60);
+    if (h > 0) return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  }
+
+  // Update uptime clock every second
+  setInterval(function() {
+    if (!startTime) return;
+    var elapsed = (Date.now() - startTime) / 1000;
+    statUptime.textContent = formatUptime(elapsed);
+    var rpm = elapsed > 0 ? (evtCount / elapsed * 60) : 0;
+    statRate.textContent = rpm.toFixed(1);
+  }, 1000);
+
+  // ---- controls ----
+
+  toggle.addEventListener('click', function() {
+    running = !running;
+    toggle.setAttribute('aria-pressed', String(running));
+    label.textContent = running ? 'Live' : 'Paused';
+    // update nav status
+    var navStatus = document.getElementById('nav-stream-status');
+    if (navStatus) {
+      navStatus.textContent = running ? '● Streaming' : '⏸ Paused';
+      navStatus.style.color = running ? 'var(--sea-green)' : 'var(--brass)';
+    }
+    if (running) {
+      icon.innerHTML = '<rect x="4" y="3" width="3" height="10" rx=".5"/><rect x="9" y="3" width="3" height="10" rx=".5"/>';
+      setConnected(true);
+      scheduleNext();
+    } else {
+      icon.innerHTML = '<path d="M4 3l8 5-8 5z" fill="currentColor"/>';
+      setConnected(false);
+      clearTimeout(timer);
+    }
+  });
+
+  // rate buttons
+  document.querySelectorAll('.rate-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      rate = btn.dataset.rate;
+      document.querySelectorAll('.rate-btn').forEach(function(b){ b.setAttribute('aria-pressed', String(b===btn)); });
+      if (running) { clearTimeout(timer); scheduleNext(); }
+    });
+  });
+
+  function scheduleNext() {
+    if (!running) return;
+    // jitter: ±25%
+    var base = RATE_MS[rate] || RATE_MS.normal;
+    var jitter = base * (0.75 + Math.random() * 0.5);
+    timer = setTimeout(pushEvent, jitter);
+  }
+
+  // ---- start ----
+
+  function start() {
+    setConnected(true);
+    // small delay so user sees initial render first
+    setTimeout(scheduleNext, 1500);
+  }
+
+  start();
+
+})();
+recountSidebar();
+render();
+</script>
+<script src="js/commandPalette.js" defer></script>
+</body>
+</html>

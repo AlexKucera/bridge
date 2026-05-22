@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bridge — Fleet Charts</title>
+<link rel="stylesheet" href="styles/bridge.css" />
+<script src="js/theme.js"></script>
+<style>
+  /* Page-local overrides — keep the layout the same as Helm / Captain's Log */
+  .overlay__main { grid-template-columns: 260px 1fr; }
+  .charts-nav__head {
+    padding: var(--sp-xl);
+    border-bottom: 1px solid var(--border-base);
+    display: flex; flex-direction: column; gap: var(--sp-md);
+  }
+  .charts-nav__head h2 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: 0.2px; }
+  .charts-nav__head p  { margin: 0; color: var(--muted); font-size: 11.5px; }
+  .charts-nav__block { padding: var(--sp-xl) var(--sp-xl) 0; }
+  .charts-nav__block h3 {
+    margin: 0 0 var(--sp-md);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .charts-nav__pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .charts-nav__row {
+    display: grid;
+    grid-template-columns: 14px 1fr auto;
+    gap: var(--sp-sm);
+    align-items: center;
+    padding: 5px 0;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .charts-nav__row .swatch { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 10px; }
+  .charts-nav__row .name b { color: var(--foam); font-weight: 600; }
+  .charts-nav__row .name small {
+    color: var(--dim); font-family: var(--font-mono); font-size: 10px; margin-left: 6px;
+  }
+  .charts-nav__row input { accent-color: var(--glow); }
+  .charts-content { overflow: auto; }
+  .sparkline { display: inline-block; height: 14px; width: 80px; vertical-align: -3px; }
+  .delta-ico {
+    display: inline-block; width: 0; height: 0;
+    border-left: 4px solid transparent; border-right: 4px solid transparent;
+  }
+  .delta-ico.up   { border-bottom: 5px solid currentColor; }
+  .delta-ico.down { border-top: 5px solid currentColor; }
+  .chart-axis text { font-family: var(--font-mono); font-size: 9.5px; fill: var(--dim); }
+  .chart-axis line { stroke: color-mix(in oklch, var(--mid) 50%, transparent); stroke-width: 1; }
+  .chart-bar { transition: filter var(--t-fast); cursor: pointer; }
+  .chart-bar:hover { filter: brightness(1.18) saturate(1.1); }
+  .chart-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .chart-area { opacity: 0.18; }
+  .chart-dot { transition: r var(--t-fast); }
+  .chart-dot:hover { r: 4.5; }
+  .empty-note {
+    padding: var(--sp-2xl);
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="overlay">
+
+  <header class="titlebar">
+    <div class="tb-left">
+      <a class="navbtn" href="dashboard.html" style="color: var(--muted); padding: 4px 8px;">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L5 8l5 5"/></svg>
+        <span class="lbl">Back to Fleet</span>
+      </a>
+    </div>
+    <div class="tb-title"><b>FLEET CHARTS</b> · analytics</div>
+    <div class="tb-right">
+      <span class="tb-pill">live · last sync 12s ago</span>
+    </div>
+  </header>
+
+  <div class="overlay__main">
+
+    <!-- ===== LEFT NAV ===== -->
+    <nav class="overlay__nav" style="padding: 0;">
+      <div class="charts-nav__head">
+        <h2>Fleet analytics</h2>
+        <p>Sessions, spend, and time-on-vessel across your local Pi runs. Nothing leaves your machine.</p>
+      </div>
+
+      <div class="charts-nav__block">
+        <h3>Time range</h3>
+        <div class="charts-nav__pills" id="rangePills">
+          <button class="filter-pill" data-range="24h">24 h</button>
+          <button class="filter-pill" data-range="7d" aria-pressed="true">7 days</button>
+          <button class="filter-pill" data-range="30d">30 days</button>
+        </div>
+      </div>
+
+      <div class="charts-nav__block">
+        <h3>Metric (chart)</h3>
+        <div class="charts-nav__pills" id="metricPills">
+          <button class="filter-pill" data-metric="sessions" aria-pressed="true">Sessions</button>
+          <button class="filter-pill" data-metric="spend">Spend</button>
+          <button class="filter-pill" data-metric="duration">Duration</button>
+        </div>
+      </div>
+
+      <div class="charts-nav__block">
+        <h3 style="display:flex; justify-content:space-between; align-items:center;">
+          Vessels
+          <button class="btn btn--ghost btn--sm" id="toggleAll" style="padding:2px 6px;">All</button>
+        </h3>
+        <div id="vesselList"></div>
+      </div>
+
+      <div class="charts-nav__block" style="padding-top: var(--sp-2xl); padding-bottom: var(--sp-2xl);">
+        <h3>Export</h3>
+        <button class="btn btn--secondary btn--sm" style="width:100%; justify-content:flex-start;">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M5 8l3 3 3-3M3 13h10"/></svg>
+          Export CSV
+        </button>
+        <button class="btn btn--ghost btn--sm" style="width:100%; justify-content:flex-start; margin-top:6px;">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12"/></svg>
+          Copy as table
+        </button>
+      </div>
+    </nav>
+
+    <!-- ===== CONTENT ===== -->
+    <div class="charts-content">
+
+      <div class="overlay__head">
+        <div>
+          <h1 id="pageTitle">Last 7 days</h1>
+          <p id="pageSub">Sat May 16 → Fri May 22 · all vessels · timezone Europe/Berlin</p>
+        </div>
+        <div class="row gap-md">
+          <span class="t-tiny mono text-dim">⌘K commands</span>
+          <button class="btn btn--secondary btn--sm">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8a5 5 0 019-3l1-1v3h-3l1-1"/><path d="M13 8a5 5 0 01-9 3l-1 1v-3h3l-1 1"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="charts">
+
+        <!-- ===== TOTALS STRIP ===== -->
+        <div class="charts__totals" id="totals">
+          <div class="stat-tile">
+            <div class="stat-tile__label">Sessions</div>
+            <div class="stat-tile__value" id="t-sessions">73</div>
+            <div class="stat-tile__delta up"><span class="delta-ico up"></span>+12% vs prior 7 d</div>
+          </div>
+          <div class="stat-tile is-spend">
+            <div class="stat-tile__label">Spend</div>
+            <div class="stat-tile__value" id="t-spend">$17.65</div>
+            <div class="stat-tile__delta up"><span class="delta-ico up"></span>+18% vs prior 7 d</div>
+          </div>
+          <div class="stat-tile is-duration">
+            <div class="stat-tile__label">Avg duration</div>
+            <div class="stat-tile__value" id="t-duration">9.3<span class="unit">min</span></div>
+            <div class="stat-tile__delta down"><span class="delta-ico down"></span>-4% vs prior 7 d</div>
+          </div>
+          <div class="stat-tile is-vessels">
+            <div class="stat-tile__label">Active vessels</div>
+            <div class="stat-tile__value" id="t-vessels">6<span class="unit">of 6</span></div>
+            <div class="stat-tile__delta flat">no change vs prior 7 d</div>
+          </div>
+        </div>
+
+        <!-- ===== PRIMARY CHART ===== -->
+        <div class="chart-card">
+          <div class="chart-card__head">
+            <div>
+              <h3 id="primaryTitle">Sessions per day · stacked by vessel</h3>
+              <span class="sub" id="primarySub">7 days · 73 sessions total</span>
+            </div>
+            <div class="chart-card__legend" id="primaryLegend"></div>
+          </div>
+          <div class="chart-card__body">
+            <svg id="primaryChart" viewBox="0 0 720 256" aria-label="Sessions per day, stacked by vessel"></svg>
+          </div>
+        </div>
+
+        <!-- ===== SECONDARY CHARTS ===== -->
+        <div class="charts__grid">
+
+          <div class="chart-card">
+            <div class="chart-card__head">
+              <div>
+                <h3>Cumulative spend</h3>
+                <span class="sub" id="cumSub">$17.65 total · running line</span>
+              </div>
+              <span class="t-tiny mono text-faint">$ · USD</span>
+            </div>
+            <div class="chart-card__body">
+              <svg id="cumChart" viewBox="0 0 480 220" aria-label="Cumulative spend over 7 days"></svg>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-card__head">
+              <div>
+                <h3>By vessel · this range</h3>
+                <span class="sub" id="rankSub">ranked by sessions</span>
+              </div>
+            </div>
+            <div class="chart-card__body">
+              <svg id="rankChart" viewBox="0 0 360 220" aria-label="Sessions per vessel, ranked"></svg>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ===== VESSEL TABLE ===== -->
+        <div class="chart-card">
+          <div class="chart-card__head">
+            <div>
+              <h3>Vessel detail</h3>
+              <span class="sub">click a row to anchor it in the dashboard</span>
+            </div>
+            <div class="row gap-sm">
+              <label class="input" style="max-width:200px;">
+                <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+                <input type="search" placeholder="Filter vessels…" id="tableFilter" />
+              </label>
+            </div>
+          </div>
+          <div class="chart-card__body" style="padding: 0;">
+            <table class="vessel-table" id="vesselTable">
+              <thead>
+                <tr>
+                  <th>Vessel</th>
+                  <th class="num">Sessions</th>
+                  <th class="num">Spend</th>
+                  <th class="num">Avg duration</th>
+                  <th>7-day trend</th>
+                  <th>Last activity</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr>
+                  <td><b>Total</b></td>
+                  <td class="num" id="totSessions">73</td>
+                  <td class="num" id="totSpend">$17.65</td>
+                  <td class="num" id="totAvg">9.3 min</td>
+                  <td colspan="2" class="text-faint" style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.4px;">
+                    1 crash recovered · 0 budget breaches · 6 of 6 vessels active
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="bottomnav">
+    <div class="bottomnav__group">
+      <a class="navbtn" href="dashboard.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13l2-6 4-3 4 3 2 6z"/><circle cx="8" cy="9" r="1.5"/></svg>
+        <span class="lbl">Fleet</span>
+      </a>
+      <a class="navbtn" href="captains-log.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+        <span class="lbl">Captain's Log</span>
+      </a>
+      <button class="navbtn" aria-current="page">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M4 11V7M7 11V4M10 11V8M13 11V6"/></svg>
+        <span class="lbl">Charts</span>
+      </button>
+      <a class="navbtn" href="helm.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="6"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+        <span class="lbl">Helm</span>
+      </a>
+    </div>
+    <div class="navmeta">
+      <span><span class="dot"></span>local · ~/.bridge/sessions/</span>
+      <span class="text-faint">·</span>
+      <span id="liveCount">73 sessions in window</span>
+      <span class="text-faint">·</span>
+      <span class="text-dim">⌘3 charts</span>
+    </div>
+  </nav>
+</div>
+
+<script src="js/commandPalette.js" defer></script>
+<script>
+/* ============================================================
+   FLEET CHARTS — data + render
+   Stable per-vessel color binds across every chart on the page.
+   ============================================================ */
+
+const VESSELS = [
+  { id: 'bridge',       label: 'bridge',       branch: 'main',                color: 'var(--glow)',        last: '12 m ago',  avgMin: 8.4 },
+  { id: 'open-design',  label: 'open-design',  branch: 'feat/agent-browser',  color: 'var(--cargo-blue)',  last: '38 m ago',  avgMin: 14.2 },
+  { id: 'lighthouse',   label: 'lighthouse',   branch: 'main',                color: 'var(--brass)',       last: '4 h ago',   avgMin: 5.8 },
+  { id: 'pi-runtime',   label: 'pi-runtime',   branch: 'bugfix/event-stream', color: 'var(--alert-red)',   last: '1 d ago',   avgMin: 6.1 },
+  { id: 'dialysispal',  label: 'dialysisPal',  branch: 'develop',             color: 'var(--sea-green)',   last: '3 d ago',   avgMin: 3.4 },
+  { id: 'fleet-charts', label: 'fleet-charts', branch: 'main',                color: 'var(--crew-purple)', last: '5 d ago',   avgMin: 2.1 }
+];
+
+// 7 days, oldest first → newest. Day = real recent week (Sat 16 → Fri 22).
+const DAYS_7 = [
+  { date: 'Sat 16', sessions: { 'bridge':2, 'open-design':1, 'lighthouse':0, 'pi-runtime':2, 'dialysispal':0, 'fleet-charts':0 }, spend: { 'bridge':0.31, 'open-design':0.42, 'lighthouse':0, 'pi-runtime':0.42, 'dialysispal':0, 'fleet-charts':0 } },
+  { date: 'Sun 17', sessions: { 'bridge':1, 'open-design':2, 'lighthouse':1, 'pi-runtime':0, 'dialysispal':0, 'fleet-charts':0 }, spend: { 'bridge':0.18, 'open-design':0.84, 'lighthouse':0.18, 'pi-runtime':0, 'dialysispal':0.12, 'fleet-charts':0 } },
+  { date: 'Mon 18', sessions: { 'bridge':4, 'open-design':3, 'lighthouse':1, 'pi-runtime':1, 'dialysispal':1, 'fleet-charts':0 }, spend: { 'bridge':0.62, 'open-design':1.21, 'lighthouse':0.21, 'pi-runtime':0.31, 'dialysispal':0.08, 'fleet-charts':0 } },
+  { date: 'Tue 19', sessions: { 'bridge':5, 'open-design':4, 'lighthouse':2, 'pi-runtime':0, 'dialysispal':0, 'fleet-charts':1 }, spend: { 'bridge':0.81, 'open-design':1.62, 'lighthouse':0.34, 'pi-runtime':0, 'dialysispal':0, 'fleet-charts':0.04 } },
+  { date: 'Wed 20', sessions: { 'bridge':3, 'open-design':2, 'lighthouse':1, 'pi-runtime':3, 'dialysispal':0, 'fleet-charts':1 }, spend: { 'bridge':0.48, 'open-design':0.74, 'lighthouse':0.18, 'pi-runtime':0.81, 'dialysispal':0, 'fleet-charts':0.05 } },
+  { date: 'Thu 21', sessions: { 'bridge':6, 'open-design':5, 'lighthouse':0, 'pi-runtime':0, 'dialysispal':1, 'fleet-charts':0 }, spend: { 'bridge':1.12, 'open-design':2.18, 'lighthouse':0, 'pi-runtime':0, 'dialysispal':0.12, 'fleet-charts':0 } },
+  { date: 'Fri 22', sessions: { 'bridge':10, 'open-design':6, 'lighthouse':1, 'pi-runtime':1, 'dialysispal':0, 'fleet-charts':2 }, spend: { 'bridge':1.30, 'open-design':2.42, 'lighthouse':0.22, 'pi-runtime':0.24, 'dialysispal':0, 'fleet-charts':0.08 } }
+];
+
+// 24 h: today's slice only.
+const DAYS_24H = [DAYS_7[6]];
+
+// 30 d: extend the 7-day pattern backwards with deterministic noise.
+const DAYS_30 = buildSyntheticDays(30, DAYS_7);
+
+function buildSyntheticDays(n, seedDays) {
+  const out = [];
+  // simple LCG for stable noise so refresh doesn't reshuffle
+  let s = 17;
+  const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  for (let i = 0; i < n; i++) {
+    const seed = seedDays[(seedDays.length - 1 - (i % seedDays.length) + seedDays.length) % seedDays.length];
+    const sessions = {}, spend = {};
+    const daysAgo = n - 1 - i;
+    VESSELS.forEach(v => {
+      const base = seed.sessions[v.id];
+      const jitter = (rnd() - 0.5) * 1.6;
+      sessions[v.id] = Math.max(0, Math.round(base + jitter));
+      const baseSpend = seed.spend[v.id];
+      spend[v.id] = Math.max(0, +(baseSpend * (0.7 + rnd() * 0.6)).toFixed(2));
+    });
+    out.push({
+      date: 'd-' + daysAgo,
+      sessions, spend,
+      mini: daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yest' : (daysAgo + 'd')
+    });
+  }
+  return out;
+}
+
+// ---- state ----
+const state = {
+  range: '7d',
+  metric: 'sessions',
+  visible: new Set(VESSELS.map(v => v.id)),
+  search: ''
+};
+
+function days() {
+  return state.range === '24h' ? DAYS_24H
+       : state.range === '30d' ? DAYS_30
+       : DAYS_7;
+}
+
+function activeVessels() { return VESSELS.filter(v => state.visible.has(v.id)); }
+
+function totals() {
+  const dat = days();
+  let sessions = 0, spend = 0, durMin = 0;
+  const perVesselSess = {}, perVesselSpend = {};
+  VESSELS.forEach(v => { perVesselSess[v.id] = 0; perVesselSpend[v.id] = 0; });
+  dat.forEach(d => {
+    VESSELS.forEach(v => {
+      if (!state.visible.has(v.id)) return;
+      const s = d.sessions[v.id] || 0;
+      const sp = d.spend[v.id] || 0;
+      sessions += s; spend += sp;
+      perVesselSess[v.id] += s; perVesselSpend[v.id] += sp;
+      durMin += s * v.avgMin;
+    });
+  });
+  return {
+    sessions,
+    spend: +spend.toFixed(2),
+    avgDur: sessions ? +(durMin / sessions).toFixed(1) : 0,
+    activeCount: VESSELS.filter(v => state.visible.has(v.id) && perVesselSess[v.id] > 0).length,
+    perVesselSess, perVesselSpend
+  };
+}
+
+// ---- render: nav vessel list ----
+function renderVesselList() {
+  const root = document.getElementById('vesselList');
+  root.innerHTML = '';
+  VESSELS.forEach(v => {
+    const row = document.createElement('label');
+    row.className = 'charts-nav__row';
+    row.innerHTML =
+      '<input type="checkbox" ' + (state.visible.has(v.id) ? 'checked' : '') + ' />' +
+      '<span class="name"><span class="swatch" style="background:' + v.color + '"></span>' +
+      '<b>' + v.label + '</b><small>' + v.branch + '</small></span>' +
+      '<span></span>';
+    const cb = row.querySelector('input');
+    cb.addEventListener('change', () => {
+      if (cb.checked) state.visible.add(v.id);
+      else state.visible.delete(v.id);
+      renderAll();
+    });
+    root.appendChild(row);
+  });
+}
+
+// ---- render: legend ----
+function renderLegend() {
+  const root = document.getElementById('primaryLegend');
+  root.innerHTML = activeVessels().map(v =>
+    '<span><span class="swatch" style="background:' + v.color + '"></span>' + v.label + '</span>'
+  ).join('');
+}
+
+// ---- render: totals ----
+function renderTotals() {
+  const t = totals();
+  document.getElementById('t-sessions').innerHTML = t.sessions.toString();
+  document.getElementById('t-spend').innerHTML = '$' + t.spend.toFixed(2);
+  document.getElementById('t-duration').innerHTML = t.avgDur.toString() + '<span class="unit">min</span>';
+  document.getElementById('t-vessels').innerHTML = t.activeCount + '<span class="unit">of ' + VESSELS.length + '</span>';
+  document.getElementById('totSessions').textContent = t.sessions.toString();
+  document.getElementById('totSpend').textContent = '$' + t.spend.toFixed(2);
+  document.getElementById('totAvg').textContent = t.avgDur.toFixed(1) + ' min';
+  document.getElementById('liveCount').textContent = t.sessions + ' sessions in window';
+  const sub = state.range === '24h' ? 'last 24 h' : state.range === '30d' ? 'last 30 days' : 'last 7 days';
+  document.getElementById('primarySub').textContent = sub + ' · ' + t.sessions + ' sessions total';
+  document.getElementById('cumSub').textContent = '$' + t.spend.toFixed(2) + ' total · running line';
+}
+
+// ---- render: primary stacked bar chart ----
+function renderPrimary() {
+  const svg = document.getElementById('primaryChart');
+  const dat = days();
+  const W = 720, H = 256, PAD_L = 44, PAD_R = 16, PAD_T = 18, PAD_B = 36;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+
+  // For each day, total of selected metric
+  const metric = state.metric;
+  const vessels = activeVessels();
+  const stack = [...vessels].reverse(); // bottom-up draw order — make biggest at bottom by reversing the array later
+
+  // Sort stack so biggest vessel by total is at the bottom for legibility
+  const t = totals();
+  const sumByVessel = metric === 'sessions' ? t.perVesselSess :
+                      metric === 'spend'    ? t.perVesselSpend :
+                      t.perVesselSess; // duration uses sessions as proxy
+  stack.sort((a, b) => sumByVessel[b.id] - sumByVessel[a.id]);
+
+  // Per-day metric value
+  const dayVal = d => stack.reduce((acc, v) => {
+    if (metric === 'sessions') return acc + (d.sessions[v.id] || 0);
+    if (metric === 'spend')    return acc + (d.spend[v.id]    || 0);
+    if (metric === 'duration') {
+      const s = (d.sessions[v.id] || 0);
+      return acc + s * v.avgMin;
+    }
+    return acc;
+  }, 0);
+
+  const max = Math.max(1, ...dat.map(dayVal));
+  const niceMax = niceCeil(max);
+
+  const nBars = dat.length;
+  const slot = innerW / nBars;
+  const barW = Math.max(4, Math.min(56, slot * 0.62));
+
+  let html = '';
+
+  // Gridlines + y axis labels
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const y = PAD_T + innerH - (i / ticks) * innerH;
+    const v = (i / ticks) * niceMax;
+    html += '<g class="chart-axis">';
+    html += '<line x1="' + PAD_L + '" x2="' + (W - PAD_R) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '" />';
+    html += '<text x="' + (PAD_L - 8) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end">' + formatY(v, metric) + '</text>';
+    html += '</g>';
+  }
+
+  // Bars
+  dat.forEach((d, i) => {
+    const cx = PAD_L + slot * (i + 0.5);
+    const x = cx - barW / 2;
+    let cursor = PAD_T + innerH;
+    stack.forEach(v => {
+      let val = 0;
+      if (metric === 'sessions') val = d.sessions[v.id] || 0;
+      else if (metric === 'spend') val = d.spend[v.id] || 0;
+      else if (metric === 'duration') val = (d.sessions[v.id] || 0) * v.avgMin;
+      if (val <= 0) return;
+      const h = (val / niceMax) * innerH;
+      cursor -= h;
+      const tipLabel = metric === 'sessions' ? val + ' sessions' :
+                       metric === 'spend' ? '$' + val.toFixed(2) :
+                       val.toFixed(1) + ' min';
+      html += '<rect class="chart-bar" x="' + x.toFixed(1) + '" y="' + cursor.toFixed(1) +
+              '" width="' + barW.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="1.5" ry="1.5"' +
+              ' style="fill:' + v.color + '">' +
+              '<title>' + v.label + ' · ' + d.date + ' · ' + tipLabel + '</title>' +
+              '</rect>';
+    });
+    // x axis label
+    html += '<text class="chart-axis" x="' + cx.toFixed(1) + '" y="' + (H - 12).toFixed(1) +
+            '" text-anchor="middle" style="fill:var(--muted); font-family:var(--font-mono); font-size:10px;">' +
+            xLabel(d, nBars) + '</text>';
+  });
+
+  // X axis baseline
+  html += '<line class="chart-axis" x1="' + PAD_L + '" x2="' + (W - PAD_R) +
+          '" y1="' + (PAD_T + innerH).toFixed(1) + '" y2="' + (PAD_T + innerH).toFixed(1) +
+          '" style="stroke:var(--border-base); stroke-width:1;" />';
+
+  svg.innerHTML = html;
+
+  // Update header
+  const title = metric === 'sessions' ? 'Sessions per day · stacked by vessel'
+              : metric === 'spend'    ? 'Spend per day · stacked by vessel'
+              : 'Time on session per day · stacked by vessel';
+  document.getElementById('primaryTitle').textContent = title;
+}
+
+function xLabel(d, n) {
+  if (d.date.startsWith('d-')) {
+    const ago = parseInt(d.date.slice(2), 10);
+    if (n <= 30 && (ago === 0 || ago === 7 || ago === 14 || ago === 21 || ago === 29)) {
+      return ago === 0 ? 'today' : (ago + 'd');
+    }
+    return '';
+  }
+  return d.date.split(' ')[0]; // Sat / Sun / Mon...
+}
+
+function formatY(v, metric) {
+  if (metric === 'spend') return '$' + v.toFixed(v >= 10 ? 0 : 1);
+  if (metric === 'duration') return v.toFixed(0) + 'm';
+  return v.toFixed(0);
+}
+
+function niceCeil(x) {
+  if (x <= 6)   return Math.max(4, Math.ceil(x));
+  if (x <= 12)  return 12;
+  if (x <= 24)  return Math.ceil(x / 4) * 4;
+  if (x <= 60)  return Math.ceil(x / 10) * 10;
+  if (x <= 300) return Math.ceil(x / 50) * 50;
+  return Math.ceil(x / 100) * 100;
+}
+
+// ---- render: cumulative spend line ----
+function renderCum() {
+  const svg = document.getElementById('cumChart');
+  const dat = days();
+  const W = 480, H = 220, PAD_L = 44, PAD_R = 16, PAD_T = 18, PAD_B = 32;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+
+  let cum = 0;
+  const points = dat.map(d => {
+    let day = 0;
+    activeVessels().forEach(v => { day += d.spend[v.id] || 0; });
+    cum += day;
+    return cum;
+  });
+  const max = Math.max(0.01, points[points.length - 1]);
+  const niceMax = +niceCeil(max).toFixed(2);
+
+  const x = i => PAD_L + (i / Math.max(1, dat.length - 1)) * innerW;
+  const y = v => PAD_T + innerH - (v / niceMax) * innerH;
+
+  let html = '';
+
+  // gridlines
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const gy = PAD_T + innerH - (i / ticks) * innerH;
+    const v = (i / ticks) * niceMax;
+    html += '<g class="chart-axis">';
+    html += '<line x1="' + PAD_L + '" x2="' + (W - PAD_R) + '" y1="' + gy.toFixed(1) + '" y2="' + gy.toFixed(1) + '" />';
+    html += '<text x="' + (PAD_L - 8) + '" y="' + (gy + 3).toFixed(1) + '" text-anchor="end">$' + v.toFixed(v >= 10 ? 0 : 1) + '</text>';
+    html += '</g>';
+  }
+
+  // area
+  const areaPath = 'M ' + x(0) + ' ' + y(0) +
+                   points.map((p, i) => 'L ' + x(i) + ' ' + y(p)).join(' ') +
+                   ' L ' + x(points.length - 1) + ' ' + y(0) + ' Z';
+  html += '<path class="chart-area" d="' + areaPath + '" style="fill:var(--glow);" />';
+
+  // line
+  const linePath = 'M ' + x(0) + ' ' + y(0) + ' ' +
+                   points.map((p, i) => 'L ' + x(i) + ' ' + y(p)).join(' ');
+  html += '<path class="chart-line" d="' + linePath + '" style="stroke:var(--glow);" />';
+
+  // dots
+  points.forEach((p, i) => {
+    html += '<circle class="chart-dot" cx="' + x(i) + '" cy="' + y(p) + '" r="3" style="fill:var(--panel); stroke:var(--glow); stroke-width:1.5;">' +
+            '<title>' + dat[i].date + ' · $' + p.toFixed(2) + ' cumulative</title></circle>';
+  });
+
+  // x labels (sparse)
+  const labelEvery = dat.length <= 7 ? 1 : Math.ceil(dat.length / 6);
+  dat.forEach((d, i) => {
+    if (i % labelEvery !== 0 && i !== dat.length - 1) return;
+    html += '<text class="chart-axis" x="' + x(i).toFixed(1) + '" y="' + (H - 10).toFixed(1) +
+            '" text-anchor="middle" style="fill:var(--muted); font-family:var(--font-mono); font-size:10px;">' +
+            xLabel(d, dat.length) + '</text>';
+  });
+
+  svg.innerHTML = html;
+}
+
+// ---- render: per-vessel rank chart ----
+function renderRank() {
+  const svg = document.getElementById('rankChart');
+  const W = 360, H = 220, PAD_L = 90, PAD_R = 24, PAD_T = 10, PAD_B = 12;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+
+  const t = totals();
+  const rows = VESSELS.filter(v => state.visible.has(v.id))
+    .map(v => ({ v, val: t.perVesselSess[v.id] }))
+    .sort((a, b) => b.val - a.val);
+
+  if (rows.length === 0) {
+    svg.innerHTML = '<text class="chart-axis" x="' + (W/2) + '" y="' + (H/2) + '" text-anchor="middle">no vessels selected</text>';
+    return;
+  }
+
+  const max = Math.max(1, ...rows.map(r => r.val));
+  const rowH = innerH / rows.length;
+  const barH = Math.min(20, rowH * 0.62);
+
+  let html = '';
+  rows.forEach((r, i) => {
+    const cy = PAD_T + rowH * (i + 0.5);
+    const w = (r.val / max) * innerW;
+    // label
+    html += '<text x="' + (PAD_L - 8) + '" y="' + (cy + 3).toFixed(1) + '" text-anchor="end" ' +
+            'style="font-size:11px; font-weight:600; fill:var(--foam);">' + r.v.label + '</text>';
+    // bar bg
+    html += '<rect x="' + PAD_L + '" y="' + (cy - barH/2).toFixed(1) + '" width="' + innerW + '" height="' + barH +
+            '" rx="2" ry="2" style="fill:color-mix(in oklch, var(--mid) 40%, transparent);" />';
+    // bar fill
+    html += '<rect class="chart-bar" x="' + PAD_L + '" y="' + (cy - barH/2).toFixed(1) + '" width="' + w.toFixed(1) +
+            '" height="' + barH + '" rx="2" ry="2" style="fill:' + r.v.color + ';">' +
+            '<title>' + r.v.label + ' · ' + r.val + ' sessions</title></rect>';
+    // value label
+    html += '<text x="' + (PAD_L + w + 6).toFixed(1) + '" y="' + (cy + 3).toFixed(1) +
+            '" style="font-family:var(--font-mono); font-size:10.5px; font-weight:600; fill:var(--muted);">' + r.val + '</text>';
+  });
+
+  svg.innerHTML = html;
+}
+
+// ---- render: vessel table ----
+function renderTable() {
+  const dat = days();
+  const tbody = document.querySelector('#vesselTable tbody');
+  const filter = state.search.trim().toLowerCase();
+  const t = totals();
+
+  const rows = VESSELS
+    .filter(v => state.visible.has(v.id))
+    .filter(v => !filter || (v.label + ' ' + v.branch).toLowerCase().includes(filter))
+    .map(v => ({
+      v,
+      sessions: t.perVesselSess[v.id],
+      spend: t.perVesselSpend[v.id],
+      series: dat.map(d => d.sessions[v.id] || 0)
+    }))
+    .sort((a, b) => b.sessions - a.sessions);
+
+  tbody.innerHTML = rows.map(r => {
+    const spark = sparkline(r.series, r.v.color);
+    return '<tr data-vessel="' + r.v.id + '">' +
+      '<td><span class="vname"><span class="swatch" style="background:' + r.v.color + '"></span><b>' + r.v.label + '</b> <small class="text-faint mono" style="font-size:10px; margin-left:6px;">' + r.v.branch + '</small></span></td>' +
+      '<td class="num">' + r.sessions + '</td>' +
+      '<td class="num">$' + r.spend.toFixed(2) + '</td>' +
+      '<td class="num">' + r.v.avgMin.toFixed(1) + ' min</td>' +
+      '<td>' + spark + '</td>' +
+      '<td class="text-muted mono" style="font-size:10.5px;">' + r.v.last + '</td>' +
+      '</tr>';
+  }).join('');
+
+  // Row click → dashboard with vessel anchor
+  tbody.querySelectorAll('tr').forEach(tr => {
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', () => {
+      window.location.href = 'dashboard.html?vessel=' + tr.dataset.vessel;
+    });
+  });
+}
+
+function sparkline(values, color) {
+  if (!values || !values.length) return '';
+  const W = 80, H = 14;
+  const max = Math.max(1, ...values);
+  const dx = W / Math.max(1, values.length - 1);
+  const pts = values.map((v, i) => i * dx + ',' + (H - (v / max) * (H - 2) - 1));
+  return '<svg class="sparkline" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+         '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linejoin="round" />' +
+         '</svg>';
+}
+
+// ---- range / metric pills ----
+function bindPills(rootId, key, onChange) {
+  const root = document.getElementById(rootId);
+  root.querySelectorAll('.filter-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      root.querySelectorAll('.filter-pill').forEach(b => b.setAttribute('aria-pressed', 'false'));
+      btn.setAttribute('aria-pressed', 'true');
+      state[key] = btn.dataset[key];
+      onChange();
+    });
+  });
+}
+
+bindPills('rangePills', 'range', () => {
+  const titles = { '24h': 'Last 24 hours', '7d': 'Last 7 days', '30d': 'Last 30 days' };
+  const subs   = {
+    '24h': 'Fri May 22 · all vessels · timezone Europe/Berlin',
+    '7d':  'Sat May 16 → Fri May 22 · all vessels · timezone Europe/Berlin',
+    '30d': 'Apr 23 → May 22 · all vessels · timezone Europe/Berlin'
+  };
+  document.getElementById('pageTitle').textContent = titles[state.range];
+  document.getElementById('pageSub').textContent   = subs[state.range];
+  renderAll();
+});
+
+bindPills('metricPills', 'metric', renderAll);
+
+document.getElementById('toggleAll').addEventListener('click', () => {
+  const allOn = state.visible.size === VESSELS.length;
+  state.visible.clear();
+  if (!allOn) VESSELS.forEach(v => state.visible.add(v.id));
+  renderVesselList();
+  renderAll();
+});
+
+document.getElementById('tableFilter').addEventListener('input', e => {
+  state.search = e.target.value;
+  renderTable();
+});
+
+function renderAll() {
+  renderLegend();
+  renderTotals();
+  renderPrimary();
+  renderCum();
+  renderRank();
+  renderTable();
+}
+
+// Re-render when theme switches (CSS variables resolve fresh)
+window.addEventListener('bridge-theme', renderAll);
+
+renderVesselList();
+renderAll();
+</script>
+</body>
+</html>

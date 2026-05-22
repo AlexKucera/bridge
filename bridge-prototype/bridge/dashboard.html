@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bridge — Mission Control</title>
+<link rel="stylesheet" href="styles/bridge.css" />
+<script src="js/theme.js"></script>
+<style>
+  /* Page-specific grid */
+  .app {
+    grid-template-rows: 32px 1fr 170px 48px;
+  }
+  .app__main {
+    display: grid;
+    grid-template-columns: 280px 1fr 360px;
+    min-height: 0;
+    border-bottom: 1px solid var(--border-base);
+  }
+  .fleet     { grid-column: 1; border-right: 1px solid var(--border-base); display: flex; flex-direction: column; min-height: 0; }
+  .vessel-c  { grid-column: 2; display: flex; flex-direction: column; min-height: 0; background: var(--abyss); }
+  .cargo     { grid-column: 3; border-left: 1px solid var(--border-base); display: flex; flex-direction: column; min-height: 0; }
+
+  /* Fleet header */
+  .fleet__head {
+    padding: var(--sp-md) var(--sp-lg);
+    border-bottom: 1px solid var(--border-base);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-md);
+    background: var(--panel);
+  }
+  .fleet__title {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 10px; letter-spacing: 0.9px; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .fleet__title .count {
+    font-family: var(--font-mono);
+    color: var(--glow);
+    font-size: 10px;
+  }
+  .fleet__body { flex: 1; overflow: auto; padding: var(--sp-md) 0; background: var(--panel); }
+
+  /* Vessel header bar */
+  .vbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--sp-lg);
+    padding: var(--sp-md) var(--sp-2xl);
+    border-bottom: 1px solid var(--border-base);
+    background: var(--panel);
+  }
+  .vbar__name {
+    display: flex; align-items: baseline; gap: var(--sp-md);
+  }
+  .vbar__name h2 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.2px; }
+  .vbar__name .branch {
+    font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+    background: var(--deep);
+    border: 1px solid var(--border-base);
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+  .vbar__name .branch::before { content: '⌥ '; color: var(--dim); }
+  .vbar__meta {
+    display: flex; gap: var(--sp-xl); justify-content: center;
+    font-family: var(--font-mono); font-size: 10.5px; color: var(--dim);
+  }
+  .vbar__meta .stat { display: flex; align-items: center; gap: 5px; }
+  .vbar__meta .stat b { color: var(--foam); font-weight: 600; }
+  .vbar__meta .stat .l { letter-spacing: 0.7px; text-transform: uppercase; font-size: 9.5px; color: var(--dim); }
+  .vbar__actions { display: flex; gap: var(--sp-sm); align-items: center; }
+
+  /* Tab content area */
+  .tab-content {
+    flex: 1; overflow: auto; min-height: 0; position: relative;
+  }
+  .pane { display: none; height: 100%; }
+  .pane.active { display: flex; flex-direction: column; }
+
+  /* Cargo header */
+  .cargo__head {
+    padding: var(--sp-md) var(--sp-lg);
+    border-bottom: 1px solid var(--border-base);
+    background: var(--panel);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .cargo__title { font-size: 10px; letter-spacing: 0.9px; text-transform: uppercase; color: var(--muted); display: flex; gap: var(--sp-md); align-items: center; }
+  .cargo__title .ico {
+    width: 14px; height: 14px;
+    color: var(--cargo-blue);
+  }
+  .cargo__body { flex: 1; overflow: auto; min-height: 0; display: flex; flex-direction: column; }
+
+  /* Drag handle (decorative for now) */
+  .draghandle {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 4px;
+    cursor: ew-resize;
+    background: transparent;
+  }
+
+  /* Feed (Ship's Log strip) */
+  .feed {
+    overflow: hidden;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ========== TITLE BAR ========== -->
+  <header class="titlebar">
+    <div class="tb-left">
+      <span class="tb-title"><b>BRIDGE</b> · v0.1 Sea Trials</span>
+    </div>
+    <div class="tb-title">
+      <span class="tb-pill">Pi v2.4.1 — connected</span>
+    </div>
+    <div class="tb-right">
+      <span class="tb-title">⌘K · Helm</span>
+    </div>
+  </header>
+
+  <!-- ========== MAIN: FLEET | VESSEL | CARGO ========== -->
+  <main class="app__main">
+
+    <!-- ========== FLEET ========== -->
+    <aside class="fleet">
+      <div class="fleet__head">
+        <div class="fleet__title">
+          <span>⚓ Fleet</span>
+          <span class="count">6 / 6 ANCHORED</span>
+        </div>
+        <label class="input mono">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+          <input type="text" placeholder="search vessels…" />
+          <kbd class="kbd" style="border-bottom-width:1px; min-width:18px; padding:0 4px;">⌘F</kbd>
+        </label>
+      </div>
+      <div class="fleet__body" id="fleet-list">
+
+        <button class="vessel" data-vessel="bridge" aria-current="true">
+          <div class="vessel__icon">BR</div>
+          <div class="vessel__body">
+            <div class="vessel__name">bridge</div>
+            <div class="vessel__meta">
+              <span>main</span><span class="sep">·</span>
+              <span class="text-glow">+47</span><span class="text-faint">-12</span>
+            </div>
+          </div>
+          <div class="vessel__right">
+            <span class="badge badge--running pulse"><span class="dot dot--green"></span>RUN</span>
+            <span class="t-tiny text-faint">12m 04s</span>
+            <a href="vessel.html?vessel=bridge" class="t-tiny" style="color:var(--faint);text-decoration:none;margin-left:6px;" title="Vessel detail">↗</a>
+          </div>
+        </button>
+
+        <button class="vessel" data-vessel="open-design">
+          <div class="vessel__icon">OD</div>
+          <div class="vessel__body">
+            <div class="vessel__name">open-design</div>
+            <div class="vessel__meta">
+              <span>feat/agent-browser</span><span class="sep">·</span>
+              <span class="text-glow">+124</span><span class="text-faint">-31</span>
+            </div>
+          </div>
+          <div class="vessel__right">
+            <span class="badge badge--running pulse"><span class="dot dot--green"></span>RUN</span>
+            <span class="t-tiny text-faint">3m 41s</span>
+            <a href="vessel.html?vessel=open-design" class="t-tiny" style="color:var(--faint);text-decoration:none;margin-left:6px;" title="Vessel detail">↗</a>
+          </div>
+        </button>
+
+        <button class="vessel" data-vessel="lighthouse">
+          <div class="vessel__icon">LH</div>
+          <div class="vessel__body">
+            <div class="vessel__name">lighthouse</div>
+            <div class="vessel__meta">
+              <span>main</span><span class="sep">·</span>
+              <span class="text-dim">no diff</span>
+            </div>
+          </div>
+          <div class="vessel__right">
+            <span class="badge badge--warn"><span class="dot dot--amber"></span>BUILD</span>
+            <span class="t-tiny text-faint">vite err</span>
+            <a href="vessel.html?vessel=lighthouse" class="t-tiny" style="color:var(--faint);text-decoration:none;margin-left:6px;" title="Vessel detail">↗</a>
+          </div>
+        </button>
+
+        <button class="vessel" data-vessel="pi-runtime">
+          <div class="vessel__icon">PI</div>
+          <div class="vessel__body">
+            <div class="vessel__name">pi-runtime</div>
+            <div class="vessel__meta">
+              <span>bugfix/event-stream</span>
+            </div>
+          </div>
+          <div class="vessel__right">
+            <span class="badge badge--error"><span class="dot dot--red"></span>ERR</span>
+            <span class="t-tiny text-faint">exit 137</span>
+            <a href="vessel.html?vessel=pi-runtime" class="t-tiny" style="color:var(--faint);text-decoration:none;margin-left:6px;" title="Vessel detail">↗</a>
+          </div>
+        </button>
+
+        <button class="vessel" data-vessel="dialysispal">
+          <div class="vessel__icon">DP</div>
+          <div class="vessel__body">
+            <div class="vessel__name">dialysisPal</div>
+            <div class="vessel__meta">
+              <span>develop</span><span class="sep">·</span>
+              <span class="text-dim">clean</span>
+            </div>
+          </div>
+          <div class="vessel__right">
+            <span class="badge badge--idle"><span class="dot dot--dim"></span>IDLE</span>
+            <span class="t-tiny text-faint">2h ago</span>
+            <a href="vessel.html?vessel=dialysispal" class="t-tiny" style="color:var(--faint);text-decoration:none;margin-left:6px;" title="Vessel detail">↗</a>
+          </div>
+        </button>
+
+        <button class="vessel" data-vessel="fleet-charts">
+          <div class="vessel__icon">FC</div>
+          <div class="vessel__body">
+            <div class="vessel__name">fleet-charts</div>
+            <div class="vessel__meta">
+              <span>main</span><span class="sep">·</span>
+              <span class="text-dim">clean</span>
+            </div>
+          </div>
+          <div class="vessel__right">
+            <span class="badge badge--idle"><span class="dot dot--dim"></span>IDLE</span>
+            <span class="t-tiny text-faint">3d ago</span>
+            <a href="vessel.html?vessel=fleet-charts" class="t-tiny" style="color:var(--faint);text-decoration:none;margin-left:6px;" title="Vessel detail">↗</a>
+          </div>
+        </button>
+      </div>
+
+      <div class="panel__footer">
+        <button class="btn btn--ghost btn--sm">＋ Anchor Vessel</button>
+        <span class="t-tiny text-faint mono">$3.42 / $25 today</span>
+      </div>
+    </aside>
+
+    <!-- ========== VESSEL CENTER ========== -->
+    <section class="vessel-c">
+      <div class="vbar">
+        <div class="vbar__name">
+          <h2 id="v-name">bridge</h2>
+          <span class="branch" id="v-branch">main</span>
+        </div>
+        <div class="vbar__meta">
+          <div class="stat"><span class="l">Crew</span><b id="v-crew">1 Pi · thinking</b></div>
+          <div class="stat"><span class="l">Cargo</span><b id="v-cargo"><span class="text-glow">+47</span> / <span style="color:var(--alert-red)">-12</span> · 3 files</b></div>
+          <div class="stat"><span class="l">Health</span><b><span class="dot dot--green pulse" style="margin-right:4px;"></span>All hands</b></div>
+        </div>
+        <div class="vbar__actions">
+          <button class="btn btn--icon" title="Pause crew">
+            <svg class="ico" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="3" width="3" height="10" rx="1"/><rect x="9" y="3" width="3" height="10" rx="1"/></svg>
+          </button>
+          <button class="btn btn--icon" title="Stop session">
+            <svg class="ico" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1"/></svg>
+          </button>
+          <button class="btn btn--secondary btn--sm">＋ Launch Pi</button>
+        </div>
+      </div>
+
+      <nav class="tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-tab="crew">
+          Crew <span class="badge badge--crew" style="background:transparent;border:0;padding:0;color:var(--crew-purple);">2</span>
+        </button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="comms">
+          Comms Deck
+        </button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="engine">
+          Engine Room <span class="badge badge--warn" style="background:transparent;border:0;padding:0;color:var(--brass);">1</span>
+        </button>
+        <div style="flex:1"></div>
+        <span class="t-tiny text-faint mono">session · /Users/alex/code/bridge</span>
+      </nav>
+
+      <div class="tab-content">
+
+        <!-- ===== CREW (Execution View) ===== -->
+        <div class="pane active" id="pane-crew">
+          <div class="exec">
+            <div class="exec__session">
+              <span class="label">Pi · json</span>
+              <span class="meta">
+                <span><b>session</b> b4f9-7a21</span>
+                <span><b>model</b> claude-opus-4-7</span>
+                <span><b>tools</b> read · grep · edit · bash</span>
+                <span><b>cost</b> $0.41 · 4,392 in / 1,108 out</span>
+                <span><b>elapsed</b> 12m 04s</span>
+              </span>
+              <button class="btn btn--ghost btn--sm" style="margin-left:auto;">View raw events ↗</button>
+            </div>
+
+            <!-- Turn 1: user -->
+            <article class="turn">
+              <header class="turn__head">
+                <span class="turn__bullet turn__bullet--user"></span>
+                <span>Captain · turn 01</span>
+                <span class="turn__time">14:20:11</span>
+              </header>
+              <div class="bubble bubble--user">
+                /skill a11y-audit — audit Panel + Sidebar for WCAG 2.1 AA contrast and missing aria-labels. Edit in place, leave a short note in CHANGELOG.
+              </div>
+            </article>
+
+            <!-- Turn 2: thinking -->
+            <article class="turn">
+              <header class="turn__head">
+                <span class="turn__bullet"></span>
+                <span>Pi · thinking</span>
+                <span class="turn__time">14:20:14</span>
+              </header>
+              <div class="bubble bubble--think">
+                I'll start by reading the Panel and Sidebar components, then grep for existing aria attributes to find gaps. Contrast checks need the design tokens — I'll pull those from <span class="mono" style="color:var(--cargo-blue);">styles/tokens.css</span>.
+              </div>
+            </article>
+
+            <!-- Turn 3: tool calls -->
+            <article class="turn">
+              <header class="turn__head">
+                <span class="turn__bullet turn__bullet--tool"></span>
+                <span>Pi · tool runs · 4</span>
+                <span class="turn__time">14:20:18</span>
+              </header>
+              <div class="toolcall">
+                <span class="toolcall__tag">read</span>
+                <span class="toolcall__arg">src/components/Panel.tsx · 142 lines</span>
+                <span class="toolcall__status"><span class="dot dot--green"></span>OK · 38ms</span>
+              </div>
+              <div class="toolcall">
+                <span class="toolcall__tag">read</span>
+                <span class="toolcall__arg">src/components/Sidebar.tsx · 211 lines</span>
+                <span class="toolcall__status"><span class="dot dot--green"></span>OK · 42ms</span>
+              </div>
+              <div class="toolcall">
+                <span class="toolcall__tag">grep</span>
+                <span class="toolcall__arg">"role=" src/ — 18 matches across 12 files</span>
+                <span class="toolcall__status"><span class="dot dot--green"></span>OK · 156ms</span>
+              </div>
+              <div class="toolcall">
+                <span class="toolcall__tag">read</span>
+                <span class="toolcall__arg">styles/tokens.css · 78 lines</span>
+                <span class="toolcall__status"><span class="dot dot--green"></span>OK · 21ms</span>
+              </div>
+            </article>
+
+            <!-- Turn 4: text -->
+            <article class="turn">
+              <header class="turn__head">
+                <span class="turn__bullet turn__bullet--text"></span>
+                <span>Pi · response</span>
+                <span class="turn__time">14:21:02</span>
+              </header>
+              <div class="bubble bubble--text">
+                <span class="bubble__meta">findings</span>
+                Four issues to fix: Panel header is missing <span class="mono" style="color:var(--cargo-blue);">aria-label</span> on the action button row; Sidebar uses <span class="mono" style="color:var(--cargo-blue);">role="navigation"</span> without a label; the muted-on-deep combo measures <b style="color:var(--brass)">4.31:1</b> (below 4.5:1 AA); and the badge-pulse animation lacks a reduced-motion fallback. Editing now.
+              </div>
+            </article>
+
+            <!-- Turn 5: in-flight edit -->
+            <article class="turn">
+              <header class="turn__head">
+                <span class="turn__bullet turn__bullet--tool"></span>
+                <span>Pi · running tool · in flight</span>
+                <span class="turn__time">14:31:48</span>
+              </header>
+              <div class="toolcall" style="border-color: color-mix(in oklch, var(--glow) 30%, transparent); background: color-mix(in oklch, var(--glow) 6%, var(--deep));">
+                <span class="toolcall__tag" style="color: var(--glow);">edit</span>
+                <span class="toolcall__arg">src/components/Panel.tsx — add aria-label to actions, bump --muted contrast</span>
+                <span class="toolcall__status" style="color: var(--glow);">
+                  <span class="dot dot--cyan pulse"></span>RUNNING
+                </span>
+              </div>
+            </article>
+
+          </div>
+        </div>
+
+        <!-- ===== COMMS DECK (Terminal) ===== -->
+        <div class="pane" id="pane-comms">
+          <div class="terminal">
+            <div class="terminal__head">
+              <span><span class="dot dot--green pulse" style="display:inline-block; margin-right:6px;"></span>PTY · zsh · 142×38 · pi —mode interactive</span>
+              <span style="margin-left:auto;">scrollback 2,841 lines</span>
+            </div>
+            <div class="terminal__body" id="term">
+<p class="ln-dim">$ pi --mode interactive --session-dir ~/.bridge/sessions/bridge</p>
+<p class="ln-info">[pi] session b4f9-7a21 attached · model: claude-opus-4-7</p>
+<p class="ln-dim">─────────────────────────────────────────────────────────────────────────────</p>
+<p class="ln-prompt">captain@bridge ▸ <span class="ln-info">help me draft a PRD for the Captain's Log overlay</span></p>
+<p>I'll start with the data model first since that drives the UI: events have</p>
+<p>{ timestamp, vessel_id, kind: 'run'|'ship'|'warn'|'err'|'crew', payload }.</p>
+<p>The Captain's Log is the chronological projection of this stream across all</p>
+<p>vessels, with filter pills mapping to <span class="ln-info">kind</span> and a vessel multi-select.</p>
+<p>&nbsp;</p>
+<p class="ln-prompt">captain@bridge ▸ <span class="ln-info">how do I want to store this? sqlite?</span></p>
+<p>Yes — the architecture doc has you on SQLite + sqlx. One <span class="ln-info">events</span> table with</p>
+<p>indexes on (vessel_id, timestamp DESC) and (kind, timestamp DESC) covers both</p>
+<p>the per-vessel feed and the global Captain's Log. Retention is a separate</p>
+<p>question — vacuum after 90 days? Let me know.</p>
+<p>&nbsp;</p>
+<p class="ln-warn">[pi] tool: write src/db/events.sql — needs approval (tool_policy: AllowList)</p>
+<p class="ln-info">[pi] approve? (y/N) </p>
+<p class="ln-prompt">captain@bridge ▸ <span style="color:var(--foam);">y<span class="caret"></span></span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== ENGINE ROOM ===== -->
+        <div class="pane" id="pane-engine">
+          <div class="engine">
+            <div class="engine__card">
+              <h4><span class="dot dot--green"></span>RUN</h4>
+              <div class="engine__cmd">pnpm tauri dev</div>
+              <div class="engine__row">
+                <span class="meta">
+                  <span><b>pid</b> 28471</span>
+                  <span><b>port</b> 1420</span>
+                  <span><b>uptime</b> 1h 12m</span>
+                </span>
+                <button class="btn btn--ghost btn--sm">Stop</button>
+              </div>
+            </div>
+
+            <div class="engine__card">
+              <h4><span class="dot dot--green"></span>TEST</h4>
+              <div class="engine__cmd">pnpm test -- --watch</div>
+              <div class="engine__row">
+                <span class="meta">
+                  <span><b>pass</b> 142</span>
+                  <span><b>fail</b> 0</span>
+                  <span><b>last</b> 12s ago</span>
+                </span>
+                <button class="btn btn--ghost btn--sm">Restart</button>
+              </div>
+            </div>
+
+            <div class="engine__card">
+              <h4><span class="dot dot--amber"></span>BUILD</h4>
+              <div class="engine__cmd">cargo tauri build --target aarch64-apple-darwin</div>
+              <div class="engine__row">
+                <span class="meta">
+                  <span><b>step</b> 12 / 18</span>
+                  <span><b>elapsed</b> 4m 21s</span>
+                </span>
+                <button class="btn btn--ghost btn--sm">Logs</button>
+              </div>
+            </div>
+
+            <div class="engine__card">
+              <h4><span class="dot dot--dim"></span>DEPLOY</h4>
+              <div class="engine__cmd">scripts/notarize-and-publish.sh</div>
+              <div class="engine__row">
+                <span class="meta">
+                  <span><b>last</b> never</span>
+                  <span><b>artifact</b> dist/bridge-0.1.0-mac.dmg</span>
+                </span>
+                <button class="btn btn--secondary btn--sm">Run</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========== CARGO ========== -->
+    <aside class="cargo">
+      <div class="cargo__head">
+        <div class="cargo__title">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12v9H2z"/><path d="M2 4l6 4 6-4"/></svg>
+          Cargo
+        </div>
+        <span class="t-tiny text-faint mono">main ← origin/main</span>
+      </div>
+      <div class="cargo__body">
+
+        <div class="cargo-summary">
+          <div class="cargo-summary__head">
+            <span>Pending shipment</span>
+            <span class="mono text-dim">3 files</span>
+          </div>
+          <div class="cargo-summary__stats">
+            <div class="cargo-stat cargo-stat--add">
+              <span class="v num">+47</span><span class="l">added</span>
+            </div>
+            <div class="cargo-stat cargo-stat--mod">
+              <span class="v num">~3</span><span class="l">modified</span>
+            </div>
+            <div class="cargo-stat cargo-stat--del">
+              <span class="v num">−12</span><span class="l">removed</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cargo-list">
+          <div class="cargo-file" aria-current="true">
+            <span class="cargo-file__icon mod">M</span>
+            <span class="cargo-file__path"><span class="dir">src/components/</span>Panel.tsx</span>
+            <span class="cargo-file__stats"><span class="plus">+24</span><span class="minus">−8</span></span>
+          </div>
+          <div class="cargo-file">
+            <span class="cargo-file__icon mod">M</span>
+            <span class="cargo-file__path"><span class="dir">src/components/</span>Sidebar.tsx</span>
+            <span class="cargo-file__stats"><span class="plus">+18</span><span class="minus">−4</span></span>
+          </div>
+          <div class="cargo-file">
+            <span class="cargo-file__icon add">A</span>
+            <span class="cargo-file__path"><span class="dir">CHANGELOG.md</span></span>
+            <span class="cargo-file__stats"><span class="plus">+5</span></span>
+          </div>
+        </div>
+
+        <div class="diff-snippet">
+<pre><span class="lh hdr">@@ -41,9 +41,12 @@ Panel — header actions</span>
+<span class="lh ctx">       &lt;header className="panel__header"&gt;</span>
+<span class="lh ctx">         &lt;h3 className="panel__title"&gt;{title}&lt;/h3&gt;</span>
+<span class="lh del">-        &lt;div className="panel__actions"&gt;</span>
+<span class="lh add">+        &lt;div className="panel__actions" role="toolbar"</span>
+<span class="lh add">+             aria-label={`${title} actions`}&gt;</span>
+<span class="lh ctx">           {actions}</span>
+<span class="lh ctx">         &lt;/div&gt;</span>
+<span class="lh ctx">       &lt;/header&gt;</span>
+<span class="lh hdr">@@ -118,6 +121,9 @@ Token contrast bump</span>
+<span class="lh del">-  --muted: oklch(0.66 0.010 250);</span>
+<span class="lh add">+  --muted: oklch(0.72 0.010 250); /* 4.62:1 vs --deep */</span></pre>
+        </div>
+
+        <form class="commit-form" onsubmit="openSetSail(event)">
+          <label class="t-label" style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span>Commit message</span>
+            <button type="button" class="btn btn--ghost btn--sm" style="padding:2px 6px; font-size:10px;">↻ Auto-generate</button>
+          </label>
+          <textarea>feat(a11y): add aria-labels to Panel and Sidebar; bump --muted contrast
+
+- Panel: role="toolbar" + aria-label on action group
+- Sidebar: aria-label on &lt;nav&gt; ; remove duplicate role
+- tokens: --muted now 4.62:1 against --deep (was 4.31:1)
+- changelog entry</textarea>
+          <div class="row" style="font-size:11px; color:var(--dim); margin-top:4px;">
+            <span class="mono">conventional · 4 lines · 312 chars</span>
+            <span style="margin-left:auto;" class="mono"><span class="dot dot--green" style="display:inline-block; margin-right:4px;"></span>no conflicts</span>
+          </div>
+          <div class="row between">
+            <button type="button" class="btn btn--secondary btn--sm">Stage selected</button>
+            <button type="submit" class="btn btn--primary">
+              <svg class="ico" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l4 5v8l-4-2-4 2V6l4-5z"/></svg>
+              Set Sail
+            </button>
+          </div>
+        </form>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ========== SHIP'S LOG STRIP ========== -->
+  <section class="feed">
+    <div class="feed__head">
+      <div class="row gap-md">
+        <span class="t-label">Ship's Log</span>
+        <span class="t-tiny text-faint mono">last 60 minutes · across 6 vessels</span>
+      </div>
+      <div class="row gap-sm">
+        <button class="btn btn--icon" title="Pause feed">
+          <svg class="ico" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="3" width="3" height="10" rx="1"/><rect x="9" y="3" width="3" height="10" rx="1"/></svg>
+        </button>
+        <a href="captains-log.html" class="btn btn--ghost btn--sm">Full log ↗</a>
+      </div>
+    </div>
+    <div class="feed__body">
+      <div class="feed__item">
+        <span class="ico run">●</span>
+        <div class="body">
+          <div class="msg">Pi session started on <b>bridge</b> — skill <span class="mono">/a11y-audit</span></div>
+          <div class="vsl">bridge · main · b4f9-7a21</div>
+        </div>
+        <span class="ts">14:20</span>
+      </div>
+      <div class="feed__item">
+        <span class="ico crew">∿</span>
+        <div class="body">
+          <div class="msg">Pi tool call on <b>open-design</b> — <span class="mono">edit src/lib/agent-browser.ts</span></div>
+          <div class="vsl">open-design · feat/agent-browser</div>
+        </div>
+        <span class="ts">14:28</span>
+      </div>
+      <div class="feed__item">
+        <span class="ico ship">⚓</span>
+        <div class="body">
+          <div class="msg">Set Sail on <b>dialysisPal</b> — pushed <span class="mono">a4d12e</span> to origin/develop</div>
+          <div class="vsl">dialysisPal · develop · +6 / -2</div>
+        </div>
+        <span class="ts">14:25</span>
+      </div>
+      <div class="feed__item">
+        <span class="ico warn">!</span>
+        <div class="body">
+          <div class="msg">Build failed on <b>lighthouse</b> — <span class="mono">vite: cannot resolve '@/lib/track'</span></div>
+          <div class="vsl">lighthouse · main · build step 7/14</div>
+        </div>
+        <span class="ts">14:21</span>
+      </div>
+      <div class="feed__item">
+        <span class="ico err">×</span>
+        <div class="body">
+          <div class="msg">Pi crashed on <b>pi-runtime</b> — event parser panic at line 142</div>
+          <div class="vsl">pi-runtime · bugfix/event-stream · exit 137</div>
+        </div>
+        <span class="ts">14:18</span>
+      </div>
+      <div class="feed__item" style="border-right:0;">
+        <span class="ico run">●</span>
+        <div class="body">
+          <div class="msg">Pi session ended on <b>bridge</b> — 4 tools, $0.18, success</div>
+          <div class="vsl">bridge · main · session aa12-19c4</div>
+        </div>
+        <span class="ts">14:15</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== BOTTOM NAV ========== -->
+  <nav class="bottomnav">
+    <div class="bottomnav__group">
+      <button class="navbtn" aria-current="page">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13l2-6 4-3 4 3 2 6z"/><circle cx="8" cy="9" r="1.5"/></svg>
+        <span class="lbl">Fleet</span>
+      </button>
+      <a class="navbtn" href="captains-log.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+        <span class="lbl">Captain's Log</span>
+      </a>
+      <a class="navbtn" href="charts.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M4 11V7M7 11V4M10 11V8M13 11V6"/></svg>
+        <span class="lbl">Charts</span>
+      </a>
+      <a class="navbtn" href="helm.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="6"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+        <span class="lbl">Helm</span>
+      </a>
+    </div>
+    <div class="navmeta">
+      <span><span class="dot"></span>Pi v2.4.1</span>
+      <span class="text-faint">·</span>
+      <span>2 running</span>
+      <span class="text-faint">·</span>
+      <span>$3.42 today / $42.18 mo</span>
+      <span class="text-faint">·</span>
+      <span class="text-dim">⌘\ tweak · ⌘K cmd</span>
+    </div>
+  </nav>
+
+</div>
+
+<!-- ========== SET SAIL MODAL ========== -->
+<div class="modal-veil" id="modal-set-sail" role="dialog" aria-modal="true" aria-labelledby="set-sail-title">
+  <div class="modal">
+    <h3 id="set-sail-title">
+      <svg class="ico" viewBox="0 0 16 16" fill="currentColor" width="22" height="22"><path d="M8 1l4 5v8l-4-2-4 2V6l4-5z"/></svg>
+      Set Sail
+    </h3>
+    <p>Stage 3 files, commit, and push to <span class="mono text-glow">origin/main</span>?</p>
+    <div class="modal__row">
+      <span class="lbl">Commit</span>
+      feat(a11y): add aria-labels to Panel and Sidebar; bump --muted contrast
+    </div>
+    <div class="modal__row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div><span class="lbl">Files staged</span>3 · <span class="text-glow">+47</span> <span style="color:var(--alert-red)">-12</span></div>
+      <div><span class="lbl">Remote</span>origin/main · synced</div>
+      <div><span class="lbl">Branch protection</span><span class="text-glow">passes</span></div>
+      <div><span class="lbl">Pre-flight</span>no conflicts</div>
+    </div>
+    <div class="modal__actions">
+      <button class="btn btn--ghost" onclick="closeSetSail()">Cancel</button>
+      <button class="btn btn--primary" onclick="confirmSetSail()">
+        <svg class="ico" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l4 5v8l-4-2-4 2V6l4-5z"/></svg>
+        Confirm & Ship
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ----- Tab switching -----
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', 'false'));
+      tab.setAttribute('aria-selected', 'true');
+      const target = tab.dataset.tab;
+      document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+      document.getElementById('pane-' + target).classList.add('active');
+    });
+  });
+
+  // ----- Vessel selection -----
+  const vesselData = {
+    'bridge':       { name: 'bridge',       branch: 'main',                crew: '1 Pi · thinking',  cargo: '<span class="text-glow">+47</span> / <span style="color:var(--alert-red)">-12</span> · 3 files' },
+    'open-design':  { name: 'open-design',  branch: 'feat/agent-browser',  crew: '1 Pi · streaming', cargo: '<span class="text-glow">+124</span> / <span style="color:var(--alert-red)">-31</span> · 8 files' },
+    'lighthouse':   { name: 'lighthouse',   branch: 'main',                crew: 'idle',             cargo: 'no diff' },
+    'pi-runtime':   { name: 'pi-runtime',   branch: 'bugfix/event-stream', crew: 'crashed',          cargo: 'see log' },
+    'dialysispal':  { name: 'dialysisPal',  branch: 'develop',             crew: 'idle',             cargo: 'clean' },
+    'fleet-charts': { name: 'fleet-charts', branch: 'main',                crew: 'idle',             cargo: 'clean' }
+  };
+
+  document.querySelectorAll('.vessel').forEach(v => {
+    v.addEventListener('click', () => {
+      document.querySelectorAll('.vessel').forEach(x => x.setAttribute('aria-current', 'false'));
+      v.setAttribute('aria-current', 'true');
+      const d = vesselData[v.dataset.vessel];
+      document.getElementById('v-name').textContent = d.name;
+      document.getElementById('v-branch').textContent = d.branch;
+      document.getElementById('v-crew').textContent = d.crew;
+      document.getElementById('v-cargo').innerHTML = d.cargo;
+    });
+  });
+
+  // ----- Cargo file selection -----
+  document.querySelectorAll('.cargo-file').forEach(f => {
+    f.addEventListener('click', () => {
+      document.querySelectorAll('.cargo-file').forEach(x => x.setAttribute('aria-current', 'false'));
+      f.setAttribute('aria-current', 'true');
+    });
+  });
+
+  // ----- Set Sail modal -----
+  const modal = document.getElementById('modal-set-sail');
+  function openSetSail(e) {
+    if (e) e.preventDefault();
+    modal.classList.add('open');
+  }
+  function closeSetSail() {
+    modal.classList.remove('open');
+  }
+  function confirmSetSail() {
+    closeSetSail();
+    // animate-ish placeholder: in real app, dispatch ship action
+  }
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeSetSail(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSetSail(); });
+</script>
+<script src="js/commandPalette.js" defer></script>
+</body>
+</html>

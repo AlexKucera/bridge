@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bridge — Helm (Settings)</title>
+<link rel="stylesheet" href="styles/bridge.css" />
+<script src="js/theme.js"></script>
+<style>
+  .overlay__main {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .helm-content { overflow: auto; padding: 0 var(--sp-3xl) var(--sp-3xl); }
+  .helm-section { display: none; }
+  .helm-section.active { display: block; }
+</style>
+</head>
+<body>
+<div class="overlay">
+
+  <header class="titlebar">
+    <div class="tb-left">
+      <a class="navbtn" href="dashboard.html" style="color: var(--muted); padding: 4px 8px;">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L5 8l5 5"/></svg>
+        <span class="lbl">Back to Fleet</span>
+      </a>
+    </div>
+    <div class="tb-title"><b>HELM</b> · settings</div>
+    <div class="tb-right">
+      <span class="tb-title text-faint mono">⌘, helm</span>
+    </div>
+  </header>
+
+  <div class="overlay__main">
+
+    <!-- ===== NAV ===== -->
+    <nav class="overlay__nav">
+      <h3>Bridge</h3>
+      <a data-target="global" aria-current="true">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12"/></svg>
+        Global
+      </a>
+      <a data-target="pi">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h10M5 5v8h6V5"/></svg>
+        Pi defaults
+      </a>
+      <a data-target="vessels">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13l2-6 4-3 4 3 2 6z"/></svg>
+        Vessels
+      </a>
+
+      <h3>Captain</h3>
+      <a data-target="appearance">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 2v12"/></svg>
+        Appearance
+      </a>
+      <a data-target="keyboard">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="8" rx="1"/><path d="M4 7h1M7 7h1M10 7h1M4 10h7"/></svg>
+        Keyboard
+      </a>
+      <a data-target="advanced">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3M3.5 3.5l2 2M10.5 10.5l2 2M3.5 12.5l2-2M10.5 5.5l2-2"/></svg>
+        Advanced
+      </a>
+
+      <h3 style="margin-top: var(--sp-3xl);">About</h3>
+      <a style="color: var(--dim); cursor: default; pointer-events: none;" class="t-tiny mono">v0.1.0 · Sea Trials</a>
+      <a style="color: var(--dim); cursor: default; pointer-events: none;" class="t-tiny mono">Tauri 2.0 · SolidJS</a>
+    </nav>
+
+    <!-- ===== CONTENT ===== -->
+    <div class="helm-content">
+
+      <!-- GLOBAL -->
+      <section class="helm-section active" id="s-global">
+        <div class="overlay__head" style="padding-left: 0; padding-right: 0;">
+          <div>
+            <h1>Global</h1>
+            <p>Defaults that apply to every vessel unless overridden in <a href="#" data-target="vessels" class="goto">Vessels</a>.</p>
+          </div>
+          <button class="btn btn--ghost btn--sm">Reset to defaults</button>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Identity</h2>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Captain name</h4>
+              <p>Used in commit signatures and session metadata.</p>
+            </div>
+            <div class="setting__control">
+              <div class="setting__group">
+                <label class="input" style="max-width: 320px;">
+                  <input type="text" value="Alexander Kucera" />
+                </label>
+                <label class="input mono" style="max-width: 280px;">
+                  <input type="email" value="a.kucera@babylondreams.de" />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Session storage</h4>
+              <p>Isolated directory for Bridge-owned Pi sessions. Bridge passes this to <span class="mono">--session-dir</span> on every launch.</p>
+            </div>
+            <div class="setting__control">
+              <div class="setting__group">
+                <label class="input mono" style="max-width: 520px;">
+                  <input type="text" value="~/.bridge/sessions/" />
+                  <button class="btn btn--ghost btn--sm" style="padding:2px 8px;">Browse</button>
+                </label>
+                <span class="t-tiny text-faint mono">42 sessions · 11.8 MB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Cost & budgets</h2>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Daily budget</h4>
+              <p>Soft cap. Bridge warns at 80% and pauses new sessions at 100% until you override.</p>
+            </div>
+            <div class="setting__control">
+              <div class="setting__group">
+                <label class="input mono" style="max-width: 120px;"><input type="text" value="$25.00" /></label>
+                <span class="t-tiny text-muted mono">$3.42 spent today (14%)</span>
+                <div class="cost-bar" style="flex: 1; max-width: 220px;">
+                  <div class="cost-bar__fill" style="width: 14%; background: var(--sea-green);"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Monthly budget</h4>
+              <p>Hard cap. Sessions are blocked once exceeded — no override.</p>
+            </div>
+            <div class="setting__control">
+              <div class="setting__group">
+                <label class="input mono" style="max-width: 120px;"><input type="text" value="$400.00" /></label>
+                <span class="t-tiny text-muted mono">$42.18 / $400.00 (11%)</span>
+                <div class="cost-bar" style="flex: 1; max-width: 220px;">
+                  <div class="cost-bar__fill" style="width: 11%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Auto-stop on warning</h4>
+              <p>Pause any in-flight Pi session as soon as a warning event is emitted.</p>
+            </div>
+            <div class="setting__control">
+              <label class="toggle"><input type="checkbox" /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">Off</span></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PI DEFAULTS -->
+      <section class="helm-section" id="s-pi">
+        <div class="overlay__head" style="padding-left: 0; padding-right: 0;">
+          <div>
+            <h1>Pi defaults</h1>
+            <p>Resolved at launch time in this order: Global → vessel overrides → launch-time overrides.</p>
+          </div>
+          <span class="tb-pill">Pi v2.4.1 detected</span>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Binary</h2>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Pi binary</h4>
+              <p>Path to the <span class="mono">pi</span> executable. Bridge runs a pre-flight check before every session.</p>
+            </div>
+            <div class="setting__control">
+              <div class="setting__group">
+                <label class="input mono" style="max-width: 460px;">
+                  <input type="text" value="/Users/alex/.local/bin/pi" />
+                </label>
+                <span class="t-tiny mono" style="color: var(--sea-green); display: inline-flex; align-items: center; gap: 4px;">
+                  <span class="dot dot--green"></span>VERIFIED · pi 2.4.1
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Default model</h4>
+              <p>Override per session with <span class="mono">--model</span>.</p>
+            </div>
+            <div class="setting__control">
+              <div class="setting__group">
+                <label class="input mono" style="max-width: 320px;">
+                  <select>
+                    <option>claude-opus-4-7</option>
+                    <option>claude-sonnet-4-6</option>
+                    <option>claude-haiku-4-5</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Tool policy</h2>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Mode</h4>
+              <p>How Pi handles tool calls when launched from Bridge.</p>
+            </div>
+            <div class="setting__control">
+              <div class="row gap-md" style="flex-wrap: wrap;">
+                <label class="toggle"><input type="radio" name="policy" /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">Allow all</span></label>
+                <label class="toggle"><input type="radio" name="policy" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">Allow list</span></label>
+                <label class="toggle"><input type="radio" name="policy" /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">Deny list</span></label>
+                <label class="toggle"><input type="radio" name="policy" /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">None</span></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Allow list</h4>
+              <p>Tools Pi may run without approval. All other tools require confirmation per call.</p>
+            </div>
+            <div class="setting__control">
+              <div class="setting__group">
+                <span class="badge badge--cargo">read</span>
+                <span class="badge badge--cargo">grep</span>
+                <span class="badge badge--cargo">glob</span>
+                <span class="badge badge--cargo">edit</span>
+                <span class="badge badge--warn">bash</span>
+                <span class="badge badge--warn">write</span>
+                <button class="btn btn--ghost btn--sm" style="padding: 2px 8px;">＋ Add</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Max turns</h4>
+              <p>Stop the session after this many user / Pi turns. Set to 0 for unlimited.</p>
+            </div>
+            <div class="setting__control">
+              <div class="setting__group">
+                <label class="input mono" style="max-width: 120px;"><input type="number" value="40" /></label>
+                <span class="t-tiny text-faint mono">recommended: 20-50</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Post-session</h2>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Auto-transition to Cargo review</h4>
+              <p>When a session ends successfully and has produced a diff, automatically focus the Cargo panel with the pre-loaded commit message.</p>
+            </div>
+            <div class="setting__control">
+              <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">On</span></label>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Auto-generate commit message</h4>
+              <p>Use Pi's session summary to generate a conventional commit. You can edit before Set Sail.</p>
+            </div>
+            <div class="setting__control">
+              <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">On</span></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VESSELS -->
+      <section class="helm-section" id="s-vessels">
+        <div class="overlay__head" style="padding-left: 0; padding-right: 0;">
+          <div>
+            <h1>Vessels</h1>
+            <p>Per-vessel overrides for Pi configuration. Empty cells inherit from <a href="#" data-target="global" class="goto">Global</a>.</p>
+          </div>
+          <button class="btn btn--secondary btn--sm">＋ Anchor Vessel</button>
+        </div>
+
+        <div class="section">
+          <div class="vessel-row head">
+            <span></span>
+            <span>Vessel · Path</span>
+            <span>Model</span>
+            <span>Policy</span>
+            <span>Budget</span>
+            <span></span>
+          </div>
+
+          <div class="vessel-row">
+            <span><span class="dot dot--green pulse"></span></span>
+            <span class="vname">
+              <b>bridge</b>
+              <small>~/code/bridge</small>
+            </span>
+            <span class="mono">opus-4-7</span>
+            <span class="mono">allow-list</span>
+            <span class="mono">— inherit —</span>
+            <button class="btn btn--icon" title="Configure">⚙</button>
+          </div>
+
+          <div class="vessel-row">
+            <span><span class="dot dot--green pulse"></span></span>
+            <span class="vname">
+              <b>open-design</b>
+              <small>~/code/open-design</small>
+            </span>
+            <span class="mono">opus-4-7</span>
+            <span class="mono">allow-all</span>
+            <span class="mono">$50 / mo</span>
+            <button class="btn btn--icon" title="Configure">⚙</button>
+          </div>
+
+          <div class="vessel-row">
+            <span><span class="dot dot--amber"></span></span>
+            <span class="vname">
+              <b>lighthouse</b>
+              <small>~/code/lighthouse</small>
+            </span>
+            <span class="mono">sonnet-4-6</span>
+            <span class="mono">— inherit —</span>
+            <span class="mono">— inherit —</span>
+            <button class="btn btn--icon" title="Configure">⚙</button>
+          </div>
+
+          <div class="vessel-row">
+            <span><span class="dot dot--red"></span></span>
+            <span class="vname">
+              <b>pi-runtime</b>
+              <small>~/code/pi-runtime</small>
+            </span>
+            <span class="mono">opus-4-7</span>
+            <span class="mono">deny-list</span>
+            <span class="mono">$30 / mo</span>
+            <button class="btn btn--icon" title="Configure">⚙</button>
+          </div>
+
+          <div class="vessel-row">
+            <span><span class="dot dot--dim"></span></span>
+            <span class="vname">
+              <b>dialysisPal</b>
+              <small>~/code/dialysisPal</small>
+            </span>
+            <span class="mono">— inherit —</span>
+            <span class="mono">allow-list</span>
+            <span class="mono">— inherit —</span>
+            <button class="btn btn--icon" title="Configure">⚙</button>
+          </div>
+
+          <div class="vessel-row">
+            <span><span class="dot dot--dim"></span></span>
+            <span class="vname">
+              <b>fleet-charts</b>
+              <small>~/code/fleet-charts</small>
+            </span>
+            <span class="mono">haiku-4-5</span>
+            <span class="mono">none</span>
+            <span class="mono">$10 / mo</span>
+            <button class="btn btn--icon" title="Configure">⚙</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- APPEARANCE -->
+      <section class="helm-section" id="s-appearance">
+        <div class="overlay__head" style="padding-left: 0; padding-right: 0;">
+          <div>
+            <h1>Appearance</h1>
+            <p>Dark is the identity. Light mode is for bright rooms.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Theme</h2>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Mode</h4>
+              <p>System will follow your OS preference.</p>
+            </div>
+            <div class="setting__control">
+              <div class="row gap-md" id="themePicker">
+                <label class="toggle"><input type="radio" name="theme" value="dark" /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">Dark</span></label>
+                <label class="toggle"><input type="radio" name="theme" value="light" /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">Light</span></label>
+                <label class="toggle"><input type="radio" name="theme" value="system" /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">System</span></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Accent</h4>
+              <p>The primary identity carrier. Cyan glow is the canonical choice; alternates available for color-blind users.</p>
+            </div>
+            <div class="setting__control">
+              <div class="row gap-sm" id="accentPicker">
+                <button class="swatch" data-accent="glow"  title="Glow (cyan, default)" aria-label="Glow"  style="--sw: oklch(0.82 0.15 195);"></button>
+                <button class="swatch" data-accent="sea"   title="Sea green"             aria-label="Sea"   style="--sw: oklch(0.78 0.16 155);"></button>
+                <button class="swatch" data-accent="brass" title="Brass"                 aria-label="Brass" style="--sw: oklch(0.85 0.18 75);"></button>
+                <button class="swatch" data-accent="cargo" title="Cargo blue"            aria-label="Cargo" style="--sw: oklch(0.72 0.14 230);"></button>
+                <button class="swatch" data-accent="crew"  title="Crew purple"           aria-label="Crew"  style="--sw: oklch(0.68 0.18 300);"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Type</h2>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Sans family</h4>
+              <p>Used for UI chrome, headings, body text.</p>
+            </div>
+            <div class="setting__control">
+              <label class="input" style="max-width: 320px;">
+                <select>
+                  <option>Inter (recommended)</option>
+                  <option>SF Pro</option>
+                  <option>Söhne</option>
+                  <option>System default</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Mono family</h4>
+              <p>Used for code, paths, terminal, session metadata.</p>
+            </div>
+            <div class="setting__control">
+              <label class="input mono" style="max-width: 320px;">
+                <select>
+                  <option>JetBrains Mono (recommended)</option>
+                  <option>SF Mono</option>
+                  <option>Fira Code</option>
+                  <option>Cascadia Code</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Density</h4>
+              <p>Compact = more vessels visible. Comfortable = more breathing room.</p>
+            </div>
+            <div class="setting__control">
+              <div class="row gap-md" id="densityPicker">
+                <label class="toggle"><input type="radio" name="density" value="compact"     /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">Compact</span></label>
+                <label class="toggle"><input type="radio" name="density" value="default"     /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">Default</span></label>
+                <label class="toggle"><input type="radio" name="density" value="comfortable" /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">Comfortable</span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Motion</h2>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Ambient drift</h4>
+              <p>Subtle background motion. First thing to cut if performance matters.</p>
+            </div>
+            <div class="setting__control">
+              <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">On</span></label>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Terminal scan line</h4>
+              <p>Subtle CRT effect over the Comms Deck terminal.</p>
+            </div>
+            <div class="setting__control">
+              <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">On</span></label>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Reduce motion</h4>
+              <p>Disable all non-essential animations. Bridge respects your OS preference too.</p>
+            </div>
+            <div class="setting__control">
+              <label class="toggle"><input type="checkbox" /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">Follow OS</span></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KEYBOARD -->
+      <section class="helm-section" id="s-keyboard">
+        <div class="overlay__head" style="padding-left: 0; padding-right: 0;">
+          <div>
+            <h1>Keyboard</h1>
+            <p>Bridge is operable from the keyboard alone. Customize bindings here.</p>
+          </div>
+          <button class="btn btn--ghost btn--sm">Reset all</button>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Navigation</h2>
+          <div class="kbd-row">
+            <span>Focus Fleet</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">1</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Focus Vessel panel</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">2</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Focus Cargo</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">3</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Focus Ship's Log</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">4</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Next vessel</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">↓</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Previous vessel</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">↑</span></span>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Tabs</h2>
+          <div class="kbd-row">
+            <span>Crew tab</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">C</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Comms Deck tab</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">T</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Engine Room tab</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">E</span></span>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Actions</h2>
+          <div class="kbd-row">
+            <span>Launch Pi session</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">N</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Stop Pi session</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">.</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Stage selected files</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">S</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Set Sail (commit + push)</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">↵</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Open command palette</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">K</span></span>
+          </div>
+          <div class="kbd-row">
+            <span>Open Helm</span>
+            <span class="keys"><span class="kbd">⌘</span><span class="kbd">,</span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ADVANCED -->
+      <section class="helm-section" id="s-advanced">
+        <div class="overlay__head" style="padding-left: 0; padding-right: 0;">
+          <div>
+            <h1>Advanced</h1>
+            <p>Diagnostic switches and dangerous controls. Tread carefully.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Diagnostics</h2>
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Debug log level</h4>
+              <p>Higher levels produce more log output. Resets on restart.</p>
+            </div>
+            <div class="setting__control">
+              <label class="input mono" style="max-width: 240px;">
+                <select>
+                  <option>error</option>
+                  <option>warn</option>
+                  <option selected>info</option>
+                  <option>debug</option>
+                  <option>trace</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Telemetry</h4>
+              <p>Anonymous crash reports + usage. No code, no prompts, no diffs leave your machine.</p>
+            </div>
+            <div class="setting__control">
+              <label class="toggle"><input type="checkbox" /><span class="toggle__track"><span class="toggle__thumb"></span></span><span class="toggle__label">Off</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Danger zone</h2>
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Reset all preferences</h4>
+              <p>Restores Bridge defaults. Vessels and session history are kept.</p>
+            </div>
+            <div class="setting__control">
+              <button class="btn btn--danger btn--sm" style="align-self: flex-start;">Reset preferences</button>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting__label">
+              <h4>Drop all session history</h4>
+              <p>Deletes every JSONL session file in <span class="mono">~/.bridge/sessions/</span>. Cannot be undone.</p>
+            </div>
+            <div class="setting__control">
+              <button class="btn btn--danger btn--sm" style="align-self: flex-start;">Delete 42 sessions (11.8 MB)</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="bottomnav">
+    <div class="bottomnav__group">
+      <a class="navbtn" href="dashboard.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13l2-6 4-3 4 3 2 6z"/><circle cx="8" cy="9" r="1.5"/></svg>
+        <span class="lbl">Fleet</span>
+      </a>
+      <a class="navbtn" href="captains-log.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+        <span class="lbl">Captain's Log</span>
+      </a>
+      <a class="navbtn" href="charts.html">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M4 11V7M7 11V4M10 11V8M13 11V6"/></svg>
+        <span class="lbl">Charts</span>
+      </a>
+      <button class="navbtn" aria-current="page">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="6"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+        <span class="lbl">Helm</span>
+      </button>
+    </div>
+    <div class="navmeta">
+      <span><span class="dot"></span>Pi v2.4.1</span>
+      <span class="text-faint">·</span>
+      <span>preferences saved</span>
+      <span class="text-faint">·</span>
+      <span class="text-dim">⌘, helm</span>
+    </div>
+  </nav>
+
+</div>
+
+<script>
+  // Section switching
+  function showSection(target) {
+    document.querySelectorAll('.overlay__nav a[data-target]').forEach(a => {
+      a.setAttribute('aria-current', a.dataset.target === target ? 'true' : 'false');
+    });
+    document.querySelectorAll('.helm-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('s-' + target).classList.add('active');
+  }
+  document.querySelectorAll('[data-target]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      showSection(el.dataset.target);
+      document.querySelector('.helm-content').scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+
+  // Toggle labels
+  document.querySelectorAll('.toggle input[type=checkbox]').forEach(cb => {
+    const lbl = cb.closest('.toggle')?.querySelector('.toggle__label');
+    const init = () => { if (lbl) lbl.textContent = cb.checked ? 'On' : 'Off'; };
+    init();
+    cb.addEventListener('change', init);
+  });
+
+  // Theme picker — bind radios to BridgeTheme (set on change, sync on external change)
+  (function () {
+    const picker = document.getElementById('themePicker');
+    if (!picker || !window.BridgeTheme) return;
+    const setChecked = (pref) => {
+      picker.querySelectorAll('input[name="theme"]').forEach(r => {
+        r.checked = (r.value === pref);
+      });
+    };
+    setChecked(window.BridgeTheme.get());
+    picker.addEventListener('change', (e) => {
+      if (e.target && e.target.name === 'theme' && e.target.checked) {
+        window.BridgeTheme.set(e.target.value);
+      }
+    });
+    window.addEventListener('bridge-theme', (e) => setChecked(e.detail.pref));
+  })();
+
+  // Accent picker — bind swatches to BridgeAccent
+  (function () {
+    const picker = document.getElementById('accentPicker');
+    if (!picker || !window.BridgeAccent) return;
+    const swatches = picker.querySelectorAll('.swatch[data-accent]');
+    const reflect = (name) => {
+      swatches.forEach(s => s.setAttribute('aria-pressed', s.dataset.accent === name ? 'true' : 'false'));
+    };
+    reflect(window.BridgeAccent.get());
+    swatches.forEach(s => s.addEventListener('click', () => window.BridgeAccent.set(s.dataset.accent)));
+    window.addEventListener('bridge-accent', (e) => reflect(e.detail.accent));
+  })();
+
+  // Density picker — bind radios to BridgeDensity
+  (function () {
+    const picker = document.getElementById('densityPicker');
+    if (!picker || !window.BridgeDensity) return;
+    const radios = picker.querySelectorAll('input[name="density"]');
+    const reflect = (name) => {
+      radios.forEach(r => { r.checked = (r.value === name); });
+    };
+    reflect(window.BridgeDensity.get());
+    picker.addEventListener('change', (e) => {
+      if (e.target && e.target.name === 'density' && e.target.checked) {
+        window.BridgeDensity.set(e.target.value);
+      }
+    });
+    window.addEventListener('bridge-density', (e) => reflect(e.detail.density));
+  })();
+</script>
+<script src="js/commandPalette.js" defer></script>
+</body>
+</html>
