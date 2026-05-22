@@ -40,4 +40,15 @@ This project is indexed by GitNexus as **bridge** (414 symbols, 454 relationship
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
+## Session Logs
+
+Session logs are written to `docs/devlog/` after each completed task, issue fix, or milestone.
+They capture what was done, decisions & rationale, gotchas & fixes, and next steps. Before starting a new session, read the previous session logs.
+
+<!-- write-log: session-log-index -->
+
+| Date | Type | File | Summary |
+|------|------|------|---------|
+| 2026-05-22 | issue | [20260522-slice-1-project-scaffold-and-design-token-system-issue3_log.md](docs/devlog/20260522-slice-1-project-scaffold-and-design-token-system-issue3_log.md) | Tauri v2 scaffold + 30-section CSS design system port + TS token constants + theme hooks (203 tests) |
+
 <!-- gitnexus:end -->

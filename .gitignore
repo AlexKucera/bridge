@@ -34,3 +34,10 @@ yarn-error.log*
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .claude/*
+.pi/improvements.db
+
+# Build output
+dist/
+
+# Rust build output
+src-tauri/target/
