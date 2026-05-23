@@ -33,10 +33,11 @@ describe("Launchable Tauri App", () => {
     expect(ts).not.toContain("Get started");
   });
 
-  it("App.tsx renders the app chrome (titlebar + bottomnav + DS classes)", () => {
-    const app = readFileSync(join(ROOT, "src", "App.tsx"), "utf-8");
-    expect(app).toContain("titlebar");
-    expect(app).toContain("bottomnav");
-    expect(app).toContain("tb-pill");
+  it("app chrome (titlebar + bottomnav) exists in component tree", () => {
+    const chrome = readFileSync(join(ROOT, "src", "components", "ChromeLayout.tsx"), "utf-8");
+    const nav = readFileSync(join(ROOT, "src", "components", "BottomNavBar.tsx"), "utf-8");
+    expect(chrome).toContain("titlebar");
+    expect(nav).toContain("bottomnav");
+    expect(chrome).toContain("tb-pill");
   });
 });

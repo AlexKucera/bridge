@@ -1,54 +1,31 @@
-/* App.tsx — Bridge app shell
-   Renders the chrome layout: titlebar + main content area + bottom nav.
-   This is the root component that Tauri launches. */
+/* App.tsx — Bridge root with router
+   Uses @solidjs/router with ChromeLayout as the root layout.
+   All routes render inside the shared chrome shell.
 
-import { useTheme, useAccent, useDensity } from "./lib/theme";
+   Pattern: Router > Route(layout) > Route(leaf) means ChromeLayout
+   receives props.children which renders the matched leaf route. */
+
+import { Router, Route, Navigate } from "@solidjs/router";
+import { ChromeLayout } from "./components/ChromeLayout";
+import { WelcomeScreen } from "./screens/WelcomeScreen";
+import { FleetDashboard } from "./screens/FleetDashboard";
+import { FleetChartsScreen } from "./screens/FleetChartsScreen";
+import { CaptainsLogScreen } from "./screens/CaptainsLogScreen";
+import { HelmPanel } from "./screens/HelmPanel";
+import { VesselDetailScreen } from "./screens/VesselDetailScreen";
 
 export function App() {
-  // Initialize theme hooks (apply attributes to <html> on mount)
-  const { theme: themeSig } = useTheme();
-  const { accent } = useAccent();
-  const { density } = useDensity();
-
   return (
-    <div class="app" data-theme={themeSig()} data-accent={accent()} data-density={density()}>
-      {/* Title bar */}
-      <header class="titlebar">
-        <div class="tb-left">
-          {/* Left-side titlebar controls */}
-        </div>
-        <div class="tb-title">
-          Bridge <b>Mission Control</b>
-        </div>
-        <div class="tb-right">
-          <span class="tb-pill">v0.1</span>
-        </div>
-      </header>
-
-      {/* Main content area — vessels, execution view, etc. will render here */}
-      <main class="app__main" />
-
-      {/* Bottom navigation */}
-      <nav class="bottomnav">
-        <div class="bottomnav__group">
-          <button class="navbtn" aria-current="page">
-            <span class="ico">⚓</span>
-            <span class="lbl">Fleet</span>
-          </button>
-          <button class="navbtn">
-            <span class="ico">🚀</span>
-            <span class="lbl">Crew</span>
-          </button>
-          <button class="navbtn">
-            <span class="ico">📦</span>
-            <span class="lbl">Cargo</span>
-          </button>
-        </div>
-        <div class="navmeta">
-          <span class="dot" />
-          <span>All systems nominal</span>
-        </div>
-      </nav>
-    </div>
+    <Router>
+      <Route path="/" component={ChromeLayout}>
+        <Navigate href="/welcome" />
+        <Route path="/welcome" component={WelcomeScreen} />
+        <Route path="/fleet" component={FleetDashboard} />
+        <Route path="/charts" component={FleetChartsScreen} />
+        <Route path="/log" component={CaptainsLogScreen} />
+        <Route path="/helm" component={HelmPanel} />
+        <Route path="/vessel/:id" component={VesselDetailScreen} />
+      </Route>
+    </Router>
   );
 }
