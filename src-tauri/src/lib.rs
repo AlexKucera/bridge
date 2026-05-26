@@ -27,7 +27,7 @@ pub fn run() {
       std::fs::create_dir_all(&app_dir).expect("failed to create app data dir");
 
       let db_path: PathBuf = app_dir.join("bridge.db");
-      let rt = tokio::runtime::Handle::current();
+      let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
 
       let pool = rt
         .block_on(open_database(&db_path))

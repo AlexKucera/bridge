@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file. The format 
 ## [Unreleased]
 
 ### fix
+- **tauri:** fix startup panic caused by calling `tokio::runtime::Handle::current()` in Tauri setup closure where no Tokio runtime exists — replaced with `Runtime::new()` to create a dedicated runtime for DB init (lib.rs:30)
 - **chrome:** fix blank window caused by three layout bugs: (1) `<Navigate>` breaking SolidJS router context — replaced with explicit leaf route; (2) `.launcher` duplicating `.app` chrome grid inside content area — changed to plain scrolling block; (3) missing scroll containment on `.app__main` — added `min-height: 0; overflow-y: auto` so bottom nav stays pinned. Also fixed `href==` typos in 3 screen files and 3 mismatched router test assertions (264 pass, 0 fail)
 
 ### feat
