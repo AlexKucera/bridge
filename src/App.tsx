@@ -5,7 +5,7 @@
    Pattern: Router > Route(layout) > Route(leaf) means ChromeLayout
    receives props.children which renders the matched leaf route. */
 
-import { Router, Route, Navigate } from "@solidjs/router";
+import { Router, Route } from "@solidjs/router";
 import { ChromeLayout } from "./components/ChromeLayout";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
 import { FleetDashboard } from "./screens/FleetDashboard";
@@ -18,7 +18,7 @@ export function App() {
   return (
     <Router>
       <Route path="/" component={ChromeLayout}>
-        <Navigate href="/welcome" />
+        <Route path="/" component={WelcomeScreen} />
         <Route path="/welcome" component={WelcomeScreen} />
         <Route path="/fleet" component={FleetDashboard} />
         <Route path="/charts" component={FleetChartsScreen} />

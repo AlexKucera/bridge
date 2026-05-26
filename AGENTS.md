@@ -49,7 +49,7 @@ They capture what was done, decisions & rationale, gotchas & fixes, and next ste
 
 | Date | Type | File | Summary |
 |------|------|------|---------|
+| 2026-05-23 | issue | [20260523-fix-blank-window-after-issue4-chrome-implementation_issue4_log.md](docs/devlog/20260523-fix-blank-window-after-issue4-chrome-implementation_issue4_log.md) | Fixed blank window: Navigate context bug + duplicate .launcher grid + missing scroll containment (264 tests pass) |
 | 2026-05-22 | slice | [20260522-slice-2-component-extraction-and-tdd-test-suite-issue3_log.md](docs/devlog/20260522-slice-2-component-extraction-and-tdd-test-suite-issue3_log.md) | BottomNavBar extraction + keyboard shortcuts (1–5) + WelcomeScreen cards + OverlayLayout shell + responsive tests (264 total) |
-| 2026-05-22 | issue | [20260522-slice-1-project-scaffold-and-design-token-system-issue3_log.md](docs/devlog/20260522-slice-1-project-scaffold-and-design-token-system-issue3_log.md) | Tauri v2 scaffold + 30-section CSS design system port + TS token constants + theme hooks (203 tests) |
 
 <!-- gitnexus:end -->

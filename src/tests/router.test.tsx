@@ -42,12 +42,12 @@ describe("Router", () => {
 
   it("renders FleetDashboard stub at /fleet", async () => {
     const { findByText } = render(() => <BridgeRoutes />, { location: "/fleet" });
-    expect(await findByText(/Fleet Dashboard/i)).toBeInTheDocument();
+    expect(await findByText(/Fleet overview coming/i)).toBeInTheDocument();
   });
 
   it("renders FleetChartsScreen stub at /charts", async () => {
     const { findByText } = render(() => <BridgeRoutes />, { location: "/charts" });
-    expect(await findByText(/Fleet Charts/i)).toBeInTheDocument();
+    expect(await findByText(/Analytics and metrics coming/i)).toBeInTheDocument();
   });
 
   it("renders CaptainsLogScreen stub at /log", async () => {
@@ -57,7 +57,7 @@ describe("Router", () => {
 
   it("renders HelmPanel stub at /helm", async () => {
     const { findByText } = render(() => <BridgeRoutes />, { location: "/helm" });
-    expect(await findByText(/Helm Panel/i)).toBeInTheDocument();
+    expect(await findByText(/Vessel command interface coming/i)).toBeInTheDocument();
   });
 
   it("renders meta badges on WelcomeScreen", async () => {

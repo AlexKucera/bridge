@@ -2,7 +2,11 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### fix
+- **chrome:** fix blank window caused by three layout bugs: (1) `<Navigate>` breaking SolidJS router context — replaced with explicit leaf route; (2) `.launcher` duplicating `.app` chrome grid inside content area — changed to plain scrolling block; (3) missing scroll containment on `.app__main` — added `min-height: 0; overflow-y: auto` so bottom nav stays pinned. Also fixed `href==` typos in 3 screen files and 3 mismatched router test assertions (264 pass, 0 fail)
+
 ### feat
+
 - **scaffold:** initialize Tauri v2 + SolidJS + Vite project with Rust crate dependencies (tokio, serde, sqlx, portable-pty)
 - **design-system:** port complete 30-section CSS design system (1959 lines) from prototype with oklch color tokens, theme/accent/density switchers, and reduced-motion support
 - **hooks:** add useTheme(), useAccent(), useDensity() SolidJS hooks with localStorage persistence and data-* attribute flipping

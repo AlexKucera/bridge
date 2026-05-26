@@ -18,7 +18,7 @@ const LOG_NAV = [
       { href: "/log", label: "All Events" },
       { href: "/log?filter=alerts", label: "Alerts" },
       { href: "/log?filter=commands", label: "Commands" },
-      { href:="/log?filter=docking", label: "Docking" },
+      { href: "/log?filter=docking", label: "Docking" },
     ],
   },
 ] as const;

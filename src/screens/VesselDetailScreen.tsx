@@ -8,8 +8,8 @@ const VESSEL_NAV = [
   {
     title: "Fleet",
     items: [
-      { href:="/fleet", label: "Dashboard", icon: "⚓" },
-      { href:="/helm", label: "Helm", icon: "🧭" },
+      { href: "/fleet", label: "Dashboard", icon: "⚓" },
+      { href: "/helm", label: "Helm", icon: "🧭" },
     ],
   },
 ] as const;

@@ -15,7 +15,7 @@ const HELM_NAV = [
     title: "Command",
     items: [
       { href: "/helm", label: "Console", icon: "🧭" },
-      { href:="/helm/appearance", label: "Appearance" },
+      { href: "/helm/appearance", label: "Appearance" },
       { href: "/helm/commands", label: "Commands" },
       { href: "/helm/settings", label: "Settings" },
     ],

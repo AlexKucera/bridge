@@ -295,7 +295,12 @@ input, textarea, select { font: inherit; color: inherit; }
   grid-template-rows: 32px 1fr 48px;
   height: 100vh;
   position: relative;
-  z-index: 1;
+}
+
+/* Content area — must scroll internally so bottom nav stays pinned */
+.app__main {
+  min-height: 0;       /* allow grid track to shrink below content size */
+  overflow-y: auto;     /* scroll long content (WelcomeScreen, etc.) */
 }
 
 /* faux title strip — only label, no traffic lights (standard OS chrome supplies those) */
@@ -1490,11 +1495,8 @@ input, textarea, select { font: inherit; color: inherit; }
 
 /* ---------- 23. INDEX (Launcher) ---------- */
 .launcher {
-  height: 100vh;
-  display: grid;
-  grid-template-rows: 32px 1fr 48px;
-  position: relative;
-  z-index: 1;
+  height: 100%;
+  overflow-y: auto;
 }
 .launcher__main {
   padding: var(--sp-3xl);
