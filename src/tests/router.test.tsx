@@ -40,13 +40,10 @@ describe("Router", () => {
     expect(await findByText(/mission control/i)).toBeInTheDocument();
   });
 
-  it("renders FleetDashboard stub at /fleet", async () => {
+  it("renders FleetDashboard at /fleet", async () => {
     const { findByText } = render(() => <BridgeRoutes />, { location: "/fleet" });
-    expect(await findByText(/Fleet overview coming/i)).toBeInTheDocument();
+    expect(await findByText(/Monitor all vessels/i)).toBeInTheDocument();
   });
-
-  it("renders FleetChartsScreen stub at /charts", async () => {
-    const { findByText } = render(() => <BridgeRoutes />, { location: "/charts" });
     expect(await findByText(/Analytics and metrics coming/i)).toBeInTheDocument();
   });
 
