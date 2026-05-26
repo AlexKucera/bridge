@@ -7,6 +7,13 @@ All notable changes to this project will be documented in this file. The format 
 
 ### feat
 
+- **db:** add SQLite data layer with sqlx migrate system: 7-table initial schema (vessels, vessel_configs, bridge_config, sessions, quick_prompts, log_events with 4 indexes, appearance_prefs), DB pool initialized at Tauri startup in app data directory (3 Rust tests)
+- **vessel:** add vessel CRUD module with 6 Tauri commands: vessel_add (path validation for git repos, duplicate rejection), vessel_list / vessel_list_with_git (sorted by name, resolves git branch and dirty state via CLI), vessel_get, vessel_rename, vessel_remove with cascade delete of dependent data; VesselError enum with Serialize for Tauri v2 IPC (12 Rust tests)
+- **fleet-dashboard:** replace placeholder with 3-column CSS grid layout (180px sidebar | 1fr content | 280px activity feed) inside OverlayLayout shell
+- **vessel-card:** add VesselCard component with status dot (4 states), display name, branch label, dirty indicator, selection highlight via border-left accent bar, and onContextMenu handler (7 tests)
+- **add-vessel-dialog:** add AddVesselDialog modal with path text input, native directory picker (__TAURI__.dialog.open), auto-filled display name from dirname, validation error display, and Cancel/Confirm actions (4 tests)
+- **testing:** add 15 new test assertions across 4 test files for fleet layout, vessel card rendering, dialog interaction, and context menu events (287 total: 272 frontend + 15 Rust)
+
 - **scaffold:** initialize Tauri v2 + SolidJS + Vite project with Rust crate dependencies (tokio, serde, sqlx, portable-pty)
 - **design-system:** port complete 30-section CSS design system (1959 lines) from prototype with oklch color tokens, theme/accent/density switchers, and reduced-motion support
 - **hooks:** add useTheme(), useAccent(), useDensity() SolidJS hooks with localStorage persistence and data-* attribute flipping
