@@ -1,0 +1,1 @@
+{"type": "tool_execution_end", "toolCallId": "call_abc123", "toolName": "bash", "result": {"content": [{"type": "text", "text": "file1.txt\nfile2.txt\n"}]}}

@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file. The format 
 
 ### feat
 
+- **pi-event:** add Pi JSONL event parser (src-tauri/src/pi_event/mod.rs): PiJsonEvent enum with 14 variants covering lifecycle (Session/AgentStart/AgentEnd), turn boundaries (TurnStart/TurnEnd), message boundaries (MessageStart/MessageEnd), streaming updates via AssistantMessageEvent (ThinkingDelta, TextDelta, ToolcallStart/Delta/End), tool execution lifecycle (ToolExecutionStart/Update/End), and forward-compat Unknown { raw} variant; ParseError enum (InvalidJson/TruncatedLine/Io); parse_line() sync parser with empty-line skip and 64KB line guard; parse_jsonl_stream() async Stream wrapper; truncate_field() for 64KB-per-field truncation with marker; 23 tests including real Pi --mode json fixtures (15 fixture files)
+
+- **pi-state:** add pure state machine reducer (src-tauri/src/pi_state/mod.rs): ExecutionViewModel with session-level state (session_id, status as LiveState enum with 9 states, tokens, cost, turns); TurnViewModel per turn (role, prompt/thinking/response text, tool_calls, metrics); ToolCallViewModel per tool call (id, name, args, status across 5 lifecycle states); apply_event() pure reducer returning Vec<StateChange> notifications; crash_recovery() function marking incomplete tools Failed on process death; field truncation integration at all accumulation sites; 19 tests including stress tests (150-event burst ordering, 150-turn volume) and crash recovery scenarios
+
+- **tauri:** register 4 event-processing commands (event_parse_line, event_parse_jsonl, state_create_session, state_apply_event) in invoke_handler; add pi_event + pi_state module declarations to lib.rs
+
+- **testing:** add 42 new Rust tests (23 parser + 19 state machine); 74 total tests pass across 3 suites with zero errors
+
 - **config:** add Rust config module (src-tauri/src/config/mod.rs) with BridgeConfig, VesselPiConfig, PiLaunchConfig, ToolPolicy, ValidationReport types; resolve_config for 3-layer merge (global ← vessel ← launch overrides); build_pi_command for CLI construction; validate for binary/skill-path checks; detect_pi_binary via PATH + common locations; load_config/save_config JSON bootstrap at ~/.config/bridge/config.json; 16 Rust tests
 - **settings:** add SettingsScreen (/helm/settings route) with OverlayLayout nav sidebar (Global + Pi sections), Appearance section (ThemePicker/AccentPicker/DensityPicker), Pi Configuration section (PiBinaryPicker with auto-detect button), and ValidationStatus panel (per-check Pass/Warn/Fail results with refresh)
 - **components:** add ThemePicker (dark/light/system radio toggle), AccentPicker (5 color swatches), DensityPicker (compact/default/comfortable), PiBinaryPicker (text input + config_detect_binary Tauri command), ValidationStatus (config_validate Tauri command with overall badge + per-check list); 29 new frontend tests

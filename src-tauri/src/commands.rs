@@ -92,3 +92,63 @@ pub async fn config_validate(
 pub async fn config_detect_binary() -> Result<Option<String>, String> {
     Ok(config::detect_pi_binary())
 }
+
+// ── Event Processing Commands ───────────────────────
+
+use crate::pi_event::{self, PiJsonEvent};
+use crate::pi_state::{self, ExecutionViewModel, StateChange};
+
+/// Parse a single JSONL line into a PiJsonEvent (for debugging/testing).
+#[tauri::command]
+pub async fn event_parse_line(line: String) -> Result<Option<PiJsonEvent>, String> {
+    pi_event::parse_line(&line).map_err(|e| e.to_string())
+}
+
+/// Parse a multi-line JSONL string into a Vec of events.
+#[tauri::command]
+pub async fn event_parse_jsonl(jsonl: String) -> Result<Vec<PiJsonEvent>, String> {
+    let mut events = Vec::new();
+    for line in jsonl.lines() {
+        match pi_event::parse_line(line).map_err(|e| e.to_string())? {
+            Some(event) => events.push(event),
+            None => {}
+        }
+    }
+    Ok(events)
+}
+
+/// Create a fresh ExecutionViewModel (Queued state).
+#[tauri::command]
+pub async fn state_create_session() -> Result<ExecutionViewModel, String> {
+    Ok(ExecutionViewModel::default())
+}
+
+/// Apply a JSON-serialized PiJsonEvent to a session model.
+/// Returns (updated_model, list_of_state_changes).
+#[tauri::command]
+pub async fn state_apply_event(
+    model: ExecutionViewModel,
+    event_json: serde_json::Value,
+) -> Result<(ExecutionViewModel, Vec<String>), String> {
+    // Deserialize the event from JSON
+    let event: PiJsonEvent = serde_json::from_value(event_json)
+        .map_err(|e| format!("Invalid event: {}", e))?;
+
+    let mut model = model;
+    let changes = pi_state::apply_event(&mut model, &event);
+
+    // Convert StateChange to string descriptions for frontend
+    let change_names: Vec<String> = changes
+        .into_iter()
+        .map(|c| match c {
+            StateChange::NewTurn(id) => format!("new_turn({})", id),
+            StateChange::TurnUpdated(id) => format!("turn_updated({})", id),
+            StateChange::NewToolCall { turn_id, tool_id } => format!("new_tool({}, {})", turn_id, tool_id),
+            StateChange::ToolCallUpdated { turn_id, tool_id } => format!("tool_updated({}, {})", turn_id, tool_id),
+            StateChange::SessionStatusChanged(s) => format!("status_changed({:?})", s),
+            StateChange::MetricsUpdated => "metrics_updated".to_string(),
+        })
+        .collect();
+
+    Ok((model, change_names))
+}

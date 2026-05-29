@@ -1,9 +1,12 @@
 mod commands;
+mod pi_event;
+mod pi_state;
 mod config;
 mod db;
 mod vessel;
 
 use commands::{config_detect_binary, config_get, config_save, config_validate,
+  event_parse_line, event_parse_jsonl, state_create_session, state_apply_event,
   vessel_add, vessel_get, vessel_list, vessel_list_with_git, vessel_remove, vessel_rename};
 use db::open_database;
 use db::migrate;
@@ -52,6 +55,10 @@ pub fn run() {
       vessel_rename,
       vessel_remove,
       vessel_list_with_git,
+      event_parse_line,
+      event_parse_jsonl,
+      state_create_session,
+      state_apply_event,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

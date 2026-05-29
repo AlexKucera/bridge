@@ -1,0 +1,1 @@
+{"type": "message_update", "assistantMessageEvent": {"type": "thinking_delta", "contentIndex": 0, "delta": "Hello", "partial": {"role": "assistant", "content": [{"type": "thinking", "thinking": "Hello"}]}}}
