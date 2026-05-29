@@ -332,7 +332,8 @@ pub fn detect_pi_binary() -> Option<String> {
 
 /// Default config directory path: ~/.config/bridge/
 pub fn config_dir() -> Option<std::path::PathBuf> {
-    dirs::config_dir().map(|d| d.join("bridge"))
+    // Use ~/.config/bridge to match Issue #6 spec (not platform-specific dirs::config_dir)
+    dirs::home_dir().map(|h| h.join(".config").join("bridge"))
 }
 
 /// Full path to config.json.

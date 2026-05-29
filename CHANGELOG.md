@@ -15,8 +15,11 @@ All notable changes to this project will be documented in this file. The format 
 - **fleet-dashboard:** wire AddVesselDialog into FleetDashboard with +Add button, live vessel list from vessel_list_with_git, and submit handler that calls vessel_add and refreshes; add @tauri-apps/api dependency for Tauri invoke calls
 
 ### fix
+
+- **settings:** fix SettingsScreen config persistence: (1) wire PiBinaryPicker onChange from no-op `{}` to real `updateField()` handler; (2) rename TS BridgeConfig interface keys from snake_case to camelCase to match Rust `#[serde(rename_all = "camelCase")]` — saves were silently writing empty defaults because serde ignored unknown snake_case keys; (3) change `config_dir()` from platform-specific `dirs::config_dir()` (`~/Library/Application Support/` on macOS) to explicit `~/.config/bridge/` per Issue #6 spec; add visible save status banner (saving/saved/error), 500ms debounced saves, `[Settings]`-prefixed console diagnostics, and theme/accent/density event listeners for picker sync
+
 - **tauri:** fix startup panic caused by calling `tokio::runtime::Handle::current()` in Tauri setup closure where no Tokio runtime exists — replaced with `Runtime::new()` to create a dedicated runtime for DB init (lib.rs:30)
-- **chrome:** fix blank window caused by three layout bugs: (1) `<Navigate>` breaking SolidJS router context — replaced with explicit leaf route; (2) `.launcher` duplicating `.app` chrome grid inside content area — changed to plain scrolling block; (3) missing scroll containment on `.app__main` — added `min-height: 0; overflow-y: auto` so bottom nav stays pinned. Also fixed `href==` typos in 3 screen files and 3 mismatched router test assertions (264 pass, 0 fail)
+
 
 ### feat
 
@@ -32,7 +35,6 @@ All notable changes to this project will be documented in this file. The format 
 - **hooks:** add useTheme(), useAccent(), useDensity() SolidJS hooks with localStorage persistence and data-* attribute flipping
 - **tokens:** add TypeScript constants mirroring all CSS custom property values
 - **testing:** add 203 Vitest assertions across 7 test files covering scaffold, tokens, base styles, theme switching, component primitives, hooks, and launch readiness
-- **chrome:** add app shell (titlebar + content + bottom nav) via ChromeLayout with 32px/1fr/48px CSS grid and theme data-attributes
 - **nav:** extract BottomNavBar as pure presentational component with 5 sections (Fleet, Charts, Log, Helm, Welcome), glow underline active state, and digit 1–5 keyboard shortcuts
 - **router:** wire @solidjs/router mapping 6 routes to screen components with ChromeLayout as shared root layout; fix redirect→Navigate import
 - **screens:** implement WelcomeScreen (hero, tagline, meta badges, 4 navigation preview cards) and 5 overlay screen stubs using OverlayLayout sidebar+content shell

@@ -2414,3 +2414,33 @@ input, textarea, select { font: inherit; color: inherit; }
   white-space: nowrap;
   flex: 1;
 }
+
+/* ── Settings Save Status ─────────────────────────────── */
+
+.settings-status {
+  padding: var(--p-sm) var(--sp-md);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: var(--sp-lg);
+  transition: opacity var(--t-fast);
+}
+
+.settings-status--saving {
+  color: var(--brass);
+  background: color-mix(in oklch, var(--brass) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--brass) 30%, transparent);
+}
+
+.settings-status--saved {
+  color: var(--radar-green);
+  background: color-mix(in oklch, var(--radar-green) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--radar-green) 30%, transparent);
+}
+
+.settings-status--error {
+  color: var(--alert-red);
+  background: color-mix(in oklch, var(--alert-red) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--alert-red) 30%, transparent);
+}
