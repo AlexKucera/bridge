@@ -41,3 +41,5 @@ dist/
 
 # Rust build output
 src-tauri/target/
+
+test-results/.last-run.json

@@ -49,6 +49,7 @@ They capture what was done, decisions & rationale, gotchas & fixes, and next ste
 
 | Date | Type | File | Summary |
 |------|------|------|---------|
+| 2026-05-29 | slice | [20260529-slice-4-helm-settings-and-config-resolution-issue6_log.md](docs/devlog/20260529-slice-4-helm-settings-and-config-resolution-issue6_log.md) | Rust config module (16 tests: resolve_config, build_pi_command, validate, bootstrap) + SettingsScreen UI (ThemePicker, AccentPicker, DensityPicker, PiBinaryPicker, ValidationStatus) + 4 Tauri commands + ~340 CSS lines (321 total tests) |
 | 2026-05-26 | generic | [20260526-fix-tokio-runtime-panic-in-setup_log.md](docs/devlog/20260526-fix-tokio-runtime-panic-in-setup_log.md) | Fixed startup panic: replaced `Handle::current()` with `Runtime::new()` in Tauri setup closure (lib.rs:30) |
 | 2026-05-26 | slice | [20260526-slice-3-sqlite-data-layer-and-fleet-management-issue5_log.md](docs/devlog/20260526-slice-3-sqlite-data-layer-and-fleet-management-issue5_log.md) | SQLite data layer (7 tables) + vessel CRUD (6 Tauri commands, 15 tests) + Fleet 3-col UI + VesselCard + AddVesselDialog (287 total tests) |
 | 2026-05-23 | issue | [20260523-fix-blank-window-after-issue4-chrome-implementation_issue4_log.md](docs/devlog/20260523-fix-blank-window-after-issue4-chrome-implementation_issue4_log.md) | Fixed blank window: Navigate context bug + duplicate .launcher grid + missing scroll containment (264 tests pass) |

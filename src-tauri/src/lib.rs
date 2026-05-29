@@ -1,8 +1,10 @@
 mod commands;
+mod config;
 mod db;
 mod vessel;
 
-use commands::{vessel_add, vessel_get, vessel_list, vessel_list_with_git, vessel_remove, vessel_rename};
+use commands::{config_detect_binary, config_get, config_save, config_validate,
+  vessel_add, vessel_get, vessel_list, vessel_list_with_git, vessel_remove, vessel_rename};
 use db::open_database;
 use db::migrate;
 use std::path::PathBuf;
@@ -40,6 +42,10 @@ pub fn run() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
+      config_get,
+      config_save,
+      config_validate,
+      config_detect_binary,
       vessel_add,
       vessel_list,
       vessel_get,

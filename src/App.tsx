@@ -12,6 +12,7 @@ import { FleetDashboard } from "./screens/FleetDashboard";
 import { FleetChartsScreen } from "./screens/FleetChartsScreen";
 import { CaptainsLogScreen } from "./screens/CaptainsLogScreen";
 import { HelmPanel } from "./screens/HelmPanel";
+import { SettingsScreen } from "./screens/SettingsScreen";
 import { VesselDetailScreen } from "./screens/VesselDetailScreen";
 
 export function App() {
@@ -24,6 +25,7 @@ export function App() {
         <Route path="/charts" component={FleetChartsScreen} />
         <Route path="/log" component={CaptainsLogScreen} />
         <Route path="/helm" component={HelmPanel} />
+        <Route path="/helm/settings" component={SettingsScreen} />
         <Route path="/vessel/:id" component={VesselDetailScreen} />
       </Route>
     </Router>

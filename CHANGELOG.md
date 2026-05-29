@@ -3,6 +3,15 @@ All notable changes to this project will be documented in this file. The format 
 ## [Unreleased]
 
 ### feat
+
+- **config:** add Rust config module (src-tauri/src/config/mod.rs) with BridgeConfig, VesselPiConfig, PiLaunchConfig, ToolPolicy, ValidationReport types; resolve_config for 3-layer merge (global ← vessel ← launch overrides); build_pi_command for CLI construction; validate for binary/skill-path checks; detect_pi_binary via PATH + common locations; load_config/save_config JSON bootstrap at ~/.config/bridge/config.json; 16 Rust tests
+- **settings:** add SettingsScreen (/helm/settings route) with OverlayLayout nav sidebar (Global + Pi sections), Appearance section (ThemePicker/AccentPicker/DensityPicker), Pi Configuration section (PiBinaryPicker with auto-detect button), and ValidationStatus panel (per-check Pass/Warn/Fail results with refresh)
+- **components:** add ThemePicker (dark/light/system radio toggle), AccentPicker (5 color swatches), DensityPicker (compact/default/comfortable), PiBinaryPicker (text input + config_detect_binary Tauri command), ValidationStatus (config_validate Tauri command with overall badge + per-check list); 29 new frontend tests
+- **css:** add ~340 lines of settings styles: .setting block pattern (280px label + fluid control), glow-bar section titles (.settings-section__title), kbd keyboard hints, theme/accent/density picker styles, pi binary picker (mono input + glow border), validation panel (overall badge + per-check rows with Pass/Warn/Fail color coding)
+- **tauri:** register 4 new config commands (config_get, config_save, config_validate, config_detect_binary) in invoke_handler; add dirs = "5" dependency for config directory resolution
+
+### feat
+
 - **fleet-dashboard:** wire AddVesselDialog into FleetDashboard with +Add button, live vessel list from vessel_list_with_git, and submit handler that calls vessel_add and refreshes; add @tauri-apps/api dependency for Tauri invoke calls
 
 ### fix
