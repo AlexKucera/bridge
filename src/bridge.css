@@ -2444,3 +2444,399 @@ input, textarea, select { font: inherit; color: inherit; }
   background: color-mix(in oklch, var(--alert-red) 12%, transparent);
   border: 1px solid color-mix(in oklch, var(--alert-red) 30%, transparent);
 }
+
+
+/* ============================================================
+   EXECUTION VIEW — Slice 7: Pi Execution View Components
+   ============================================================ */
+
+/* ── Container ───────────────────────────────────────────── */
+
+.execution-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* ── Session Header ────────────────────────────────────────── */
+
+.session-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.session-header__info {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.session-header__model {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+.session-header__provider {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-header__thinking {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.session-header__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-shrink: 0;
+}
+
+.session-header__elapsed {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Status Badge — animated per LiveState variant */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.175rem 0.625rem;
+  border-radius: 9999px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.status-badge--idle {
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+}
+
+.status-badge--active {
+  color: var(--accent-blue);
+  background: color-mix(in oklch, var(--accent-blue) 12%, transparent);
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+.status-badge--done {
+  color: var(--success-green);
+  background: color-mix(in oklch, var(--success-green) 12%, transparent);
+}
+
+.status-badge--error {
+  color: var(--alert-red);
+  background: color-mix(in oklch, var(--alert-red) 12%, transparent);
+}
+
+.status-badge--stopped {
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  text-decoration: line-through;
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ── Turn List ────────────────────────────────────────────── */
+
+.turn-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  padding: 0.5rem 0;
+}
+
+.turn-list__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* ── Turn Card ───────────────────────────────────────────── */
+
+.turn-card {
+  border-left: 3px solid var(--border-focus);
+  margin: 0.25rem 0.5rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: var(--bg-secondary);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.turn-card:hover {
+  border-left-color: var(--accent-blue);
+}
+
+.turn-card--collapsed .turn-card__body {
+  display: none;
+}
+
+.turn-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+.turn-card__header:hover {
+  background: color-mix(in oklch, var(--text-primary) 4%, transparent);
+}
+
+.turn-card__role {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.turn-card__index {
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 4rem;
+}
+
+.turn-card__summary {
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.turn-card__chevron {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: 0.65rem;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.turn-card__body {
+  padding: 0 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.turn-card__prompt {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-primary);
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-subtle);
+}
+
+.turn-card__tools {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+/* ── Tool Call Card ────────────────────────────────────────── */
+
+.tool-call {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.8125rem;
+}
+
+.tool-call--read { border-left: 3px solid var(--success-green); }
+.tool-call--write { border-left: 3px solid var(--accent-orange); }
+.tool-call--command { border-left: 3px solid var(--accent-purple); }
+.tool-call--search { border-left: 3px solid var(--accent-blue); }
+
+.tool-call__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tool-call__name {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--accent-blue);
+  background: color-mix(in oklch, var(--accent-blue) 10%, transparent);
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+}
+
+.tool-call__status {
+  font-size: 0.7rem;
+  font-weight: 500;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.tool-call__duration {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tool-call__target {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-call__result {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  background: var(--bg-secondary);
+  border-radius: 0.25rem;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+/* ── Thinking Bubble ──────────────────────────────────────── */
+
+.thinking-bubble {
+  margin: 0.25rem 0;
+}
+
+.thinking-bubble__toggle {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: color-mix(in oklch, var(--accent-purple) 6%, transparent);
+  border: 1px solid color-mix(in oklch, var(--accent-purple) 20%, transparent);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border: none;
+  text-align: left;
+  font-family: inherit;
+}
+
+.thinking-bubble__toggle:hover {
+  background: color-mix(in oklch, var(--accent-purple) 10%, transparent);
+}
+
+.thinking-bubble__label {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--accent-purple);
+}
+
+.thinking-bubble__text {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 0.375rem 0;
+}
+
+/* ── Response Text ─────────────────────────────────────────── */
+
+.response-text {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 0.5rem 0;
+}
+
+.response-text code,
+.response-text pre {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  background: var(--bg-tertiary);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+.response-text__empty {
+  color: var(--text-tertiary);
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+/* ── Turn Metrics Bar ──────────────────────────────────────── */
+
+.turn-metrics {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+
+.turn-metrics__item {
+  min-width: 0;
+}
+
+.turn-metrics__separator {
+  color: var(--border-subtle);
+  user-select: none;
+}

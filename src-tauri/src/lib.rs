@@ -4,10 +4,14 @@ mod pi_state;
 mod config;
 mod db;
 mod vessel;
+mod pi_session;
+pub mod events;
 
 use commands::{config_detect_binary, config_get, config_save, config_validate,
   event_parse_line, event_parse_jsonl, state_create_session, state_apply_event,
-  vessel_add, vessel_get, vessel_list, vessel_list_with_git, vessel_remove, vessel_rename};
+  vessel_add, vessel_get, vessel_list, vessel_list_with_git, vessel_remove, vessel_rename,
+  session_launch, session_stop, session_retry, session_list, session_get};
+use crate::pi_session::SessionRegistry;
 use db::open_database;
 use db::migrate;
 use std::path::PathBuf;
@@ -41,6 +45,7 @@ pub fn run() {
         .expect("failed to run database migrations");
 
       app.manage(pool);
+      app.manage(SessionRegistry::new());
 
       Ok(())
     })
@@ -59,6 +64,11 @@ pub fn run() {
       event_parse_jsonl,
       state_create_session,
       state_apply_event,
+      session_launch,
+      session_stop,
+      session_retry,
+      session_list,
+      session_get,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

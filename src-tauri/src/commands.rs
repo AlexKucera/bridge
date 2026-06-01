@@ -152,3 +152,73 @@ pub async fn state_apply_event(
 
     Ok((model, change_names))
 }
+
+
+// -- Session Lifecycle Commands --
+
+use crate::pi_session::{self, Session, SessionMode, SessionRegistry};
+
+/// Launch a new Pi session.
+#[tauri::command]
+pub async fn session_launch(
+    pool: State<'_, Pool<Sqlite>>,
+    registry: State<'_, SessionRegistry>,
+    vessel_id: Option<i64>,
+    mode: String,
+    prompt: String,
+    overrides_json: String,
+) -> Result<Session, String> {
+    let session_mode = SessionMode::from_str(&mode).unwrap_or(SessionMode::Json);
+    let overrides: config::LaunchOverrides = serde_json::from_str(&overrides_json)
+        .map_err(|e| format!("Invalid overrides: {}", e))?;
+    let global = config::load_config().map_err(|e| e.to_string())?;
+    let running = pi_session::launch(&pool, &registry, vessel_id, &session_mode, &prompt, &overrides, global.max_concurrency)
+        .await.map_err(|e| e.to_string())?;
+    let sid = running.session_id;
+    registry.insert(sid, running).await;
+    pi_session::get_session(&pool, sid).await.map_err(|e| e.to_string())
+}
+
+/// Stop a running Pi session (SIGTERM -> grace period -> SIGKILL).
+#[tauri::command]
+pub async fn session_stop(
+    pool: State<'_, Pool<Sqlite>>,
+    registry: State<'_, SessionRegistry>,
+    session_id: i64,
+) -> Result<Session, String> {
+    pi_session::stop(&pool, &registry, session_id, 5000).await
+        .map_err(|e| e.to_string())
+}
+
+/// Retry a previous session (clone config + relaunch).
+#[tauri::command]
+pub async fn session_retry(
+    pool: State<'_, Pool<Sqlite>>,
+    registry: State<'_, SessionRegistry>,
+    session_id: i64,
+) -> Result<Session, String> {
+    let running = pi_session::retry(&pool, &registry, session_id).await
+        .map_err(|e| e.to_string())?;
+    let sid = running.session_id;
+    registry.insert(sid, running).await;
+    pi_session::get_session(&pool, sid).await.map_err(|e| e.to_string())
+}
+
+/// List all sessions.
+#[tauri::command]
+pub async fn session_list(
+    pool: State<'_, Pool<Sqlite>>,
+) -> Result<Vec<Session>, String> {
+    sqlx::query_as::<_, Session>(
+        "SELECT id, vessel_id, mode, status, prompt, model, provider, started_at, completed_at, tokens_used, total_cost, error_message FROM sessions ORDER BY started_at DESC"
+    ).fetch_all(&*pool).await.map_err(|e| e.to_string())
+}
+
+/// Get a single session by ID.
+#[tauri::command]
+pub async fn session_get(
+    pool: State<'_, Pool<Sqlite>>,
+    session_id: i64,
+) -> Result<Session, String> {
+    pi_session::get_session(&pool, session_id).await.map_err(|e| e.to_string())
+}
