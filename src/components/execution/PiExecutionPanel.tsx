@@ -57,6 +57,7 @@ export const PiExecutionPanel: Component<PiExecutionPanelProps> = (props) => {
 
       <TurnList
         turns={model().turns}
+        unknownEvents={model().unknownEvents}
         onToggleCollapse={(id) => props.store.toggleTurnCollapse(id)}
         onToggleThinking={() => {}}
         onToggleToolCall={(turnId, tcId) => props.store.toggleToolCallVisibility(turnId, tcId)}

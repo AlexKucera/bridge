@@ -81,6 +81,7 @@ export interface ExecutionViewModel {
   totalTokens: number;
   totalCost: number;
   turns: TurnViewModel[];
+  unknownEvents: Record<string, unknown>[];
 }
 
 // ─── UI Prefs ───────────────────────────────────────────────

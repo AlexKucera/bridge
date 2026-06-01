@@ -24,5 +24,8 @@ export type { ResponseTextProps } from "./ResponseText";
 export { TurnMetricsBar } from "./TurnMetricsBar";
 export type { TurnMetricsBarProps } from "./TurnMetricsBar";
 
+export { UnknownEventCard } from "./UnknownEventCard";
+export type { UnknownEventCardProps } from "./UnknownEventCard";
+
 export { PiExecutionPanel } from "./PiExecutionPanel";
 export type { PiExecutionPanelProps } from "./PiExecutionPanel";

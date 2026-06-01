@@ -69,6 +69,7 @@ function defaultModel(): ExecutionViewModel {
     totalTokens: 0,
     totalCost: 0,
     turns: [],
+    unknownEvents: [],
   };
 }
 
@@ -172,6 +173,11 @@ export function createPiExecutionStore(): PiExecutionStore {
                 turn.responseText = turn.responseText + event.textDelta;
               next.turns = next.turns.map((t, i) => i === event.turnId! ? turn : t);
             }
+            break;
+
+          default:
+            // Capture unknown/future event types for forward-compat rendering
+            next.unknownEvents = [...next.unknownEvents, event];
             break;
         }
 

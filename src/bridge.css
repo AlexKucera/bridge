@@ -2840,3 +2840,63 @@ input, textarea, select { font: inherit; color: inherit; }
   color: var(--border-subtle);
   user-select: none;
 }
+
+/* ── Unknown Event Card (forward-compat) ─────────────────── */
+
+.unknown-event-card {
+  border-left: 3px solid var(--accent-purple, #8b5cf6);
+  background: var(--surface-secondary, #1e1e2e);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.unknown-event-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted, #888);
+  font-size: 0.82rem;
+  font-family: var(--font-mono, "SF Mono", monospace);
+  text-align: left;
+}
+
+.unknown-event-card__header:hover {
+  background: rgba(139, 92, 246, 0.08);
+  color: var(--text-primary, #e4e4e7);
+}
+
+.unknown-event-card__icon {
+  font-size: 0.9rem;
+}
+
+.unknown-event-card__type {
+  font-weight: 600;
+  color: var(--accent-purple, #8b5cf6);
+}
+
+.unknown-event-card__chevron {
+  margin-left: auto;
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+}
+
+.unknown-event-card__json {
+  margin: 0;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 0.78rem;
+  font-family: var(--font-mono, "SF Mono", monospace);
+  line-height: 1.5;
+  color: var(--text-muted, #888);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border-subtle, #2a2a3c);
+}

@@ -56,4 +56,58 @@ describe("SessionHeader", () => {
     ));
     screen.getByText(/medium/i);
   });
+
+  it("applies animated (active) CSS class to active status badges", () => {
+    const activeStates = [LiveState.Thinking, LiveState.RunningTool, LiveState.StreamingText];
+    for (const state of activeStates) {
+      const { unmount } = render(() => (
+        <SessionHeader
+          modelName="test"
+          provider="test"
+          thinkingLevel="low"
+          status={state}
+          elapsedMs={0}
+        />
+      ));
+      const badge = screen.getByTestId("status-badge");
+      expect(badge.className).toContain("status-badge--active");
+      unmount();
+    }
+  });
+
+  it("applies non-animated CSS class to terminal status badges", () => {
+    const terminalStates = [LiveState.Done, LiveState.Error, LiveState.Stopped];
+    for (const state of terminalStates) {
+      const { unmount } = render(() => (
+        <SessionHeader
+          modelName="test"
+          provider="test"
+          thinkingLevel="low"
+          status={state}
+          elapsedMs={0}
+        />
+      ));
+      const badge = screen.getByTestId("status-badge");
+      expect(badge.className).not.toContain("status-badge--active");
+      unmount();
+    }
+  });
+
+  it("applies idle CSS class to Queued/Idle status badges", () => {
+    const idleStates = [LiveState.Queued, LiveState.Idle];
+    for (const state of idleStates) {
+      const { unmount } = render(() => (
+        <SessionHeader
+          modelName="test"
+          provider="test"
+          thinkingLevel="low"
+          status={state}
+          elapsedMs={0}
+        />
+      ));
+      const badge = screen.getByTestId("status-badge");
+      expect(badge.className).toContain("status-badge--idle");
+      unmount();
+    }
+  });
 });

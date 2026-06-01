@@ -179,5 +179,33 @@ describe("createPiExecutionStore", () => {
       expect(store.model().status).toBe(LiveState.Done);
       expect(store.isSessionActive()).toBe(false);
     });
+
+    it("captures unknown event types in unknownEvents array without crashing", () => {
+      const store = createPiExecutionStore();
+      const unknownEvent = { type: "future_event_type", sessionId: "s1", someField: "data" };
+      store.applyEvent(unknownEvent as any);
+      expect(store.model().unknownEvents).toHaveLength(1);
+      expect(store.model().unknownEvents[0]).toEqual(unknownEvent);
+    });
+
+    it("accumulates multiple unknown events in order", () => {
+      const store = createPiExecutionStore();
+      store.applyEvent({ type: "alpha_event" } as any);
+      store.applyEvent({ type: "beta_event" } as any);
+      store.applyEvent({ type: "status_changed", status: "Done" }); // known event
+      store.applyEvent({ type: "gamma_event" } as any);
+      expect(store.model().unknownEvents).toHaveLength(3);
+      expect(store.model().unknownEvents[0].type).toBe("alpha_event");
+      expect(store.model().unknownEvents[1].type).toBe("beta_event");
+      expect(store.model().unknownEvents[2].type).toBe("gamma_event");
+    });
+
+    it("clears unknownEvents on reset", () => {
+      const store = createPiExecutionStore();
+      store.applyEvent({ type: "mystery" } as any);
+      expect(store.model().unknownEvents).toHaveLength(1);
+      store.reset();
+      expect(store.model().unknownEvents).toHaveLength(0);
+    });
   });
 });

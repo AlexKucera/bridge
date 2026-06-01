@@ -85,6 +85,22 @@ describe("ExecutionViewModel types", () => {
     expect(turn.metrics.tokensUsed).toBe(150);
   });
 
+  it("builds ExecutionViewModel with empty unknownEvents array by default", () => {
+    const model: ExecutionViewModel = {
+      sessionId: "",
+      modelName: "",
+      provider: "",
+      thinkingLevel: "",
+      status: LiveState.Queued,
+      elapsedMs: 0,
+      totalTokens: 0,
+      totalCost: 0,
+      turns: [],
+      unknownEvents: [],
+    };
+    expect(model.unknownEvents).toEqual([]);
+  });
+
   it("builds a complete ExecutionViewModel with session data and multiple turns", () => {
     const model: ExecutionViewModel = {
       sessionId: "sess-abc",

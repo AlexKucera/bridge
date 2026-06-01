@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **bridge** (414 symbols, 454 relationships, 6 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **bridge** (1724 symbols, 3154 relationships, 145 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -40,23 +40,23 @@ This project is indexed by GitNexus as **bridge** (414 symbols, 454 relationship
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
+<!-- gitnexus:end -->
+
 ## Session Logs
 
-Session logs are written to `docs/devlog/` after each completed task, issue fix, or milestone.
-They capture what was done, decisions & rationale, gotchas & fixes, and next steps. Before starting a new session, read the previous session logs.
+Session logs are written to `docs/devlog/` after each completed task, issue fix, or milestone. They capture what was done, decisions & rationale, gotchas & fixes, and next steps. Before starting a new session, read the previous session logs.
 
 <!-- write-log: session-log-index -->
 
 | Date | Type | File | Summary |
 |------|------|------|---------|
-| 2026-06-01 | slice | [20260601-slice-7-execution-view-ac-gap-fixes-issue9_log.md](docs/devlog/20260601-slice-7-execution-view-ac-gap-fixes-issue9_log.md) | **AC gap fixes:** Tauri event listener (9 tests) + TruncatedText component (8 tests) + sessionId filtering (3 tests). 14/14 AC met, 79/79 execution-view tests pass |
-| 2026-06-01 | slice | [20260601-slice-7-execution-view-issue9_log.md](docs/devlog/20260601-slice-7-execution-view-issue9_log.md) | Execution View: TS types (5 enums/interfaces) + pi-store (20 tests, signals/actions/applyEvent/computed) + 8 components (SessionHeader, TurnMetricsBar, ThinkingBubble, ResponseText, ToolCallCard/5-states, TurnList, PiExecutionPanel) + 450 lines CSS + barrel export. 67 new tests, 12/14 AC met |
-| 2026-05-29 | slice | [20260529-slice-5-pi-event-pipeline-parser-and-state-machine-issue7_log.md](docs/devlog/20260529-slice-5-pi-event-pipeline-parser-and-state-machine-issue7_log.md) | Pi event parser (PiJsonEvent, 14 variants, parse_line, truncate_field, 23 tests) + state machine reducer (apply_event, crash_recovery, LiveState, 19 tests) + 4 Tauri commands + real Pi JSONL fixtures. All 13/13 AC met, 74 tests pass |
-| 2026-05-29 | issue | [20260529-fix-settings-screen-state-and-config-persistence_issue6_log.md](docs/devlog/20260529-fix-settings-screen-state-and-config-persistence_issue6_log.md) | Fixed SettingsScreen: reactive state, camelCase key match to Rust serde, config_dir() path to ~/.config/bridge/, visible save status (29 tests pass) |
-| 2026-05-29 | slice | [20260529-slice-4-helm-settings-and-config-resolution-issue6_log.md](docs/devlog/20260529-slice-4-helm-settings-and-config-resolution-issue6_log.md) | Rust config module (16 tests: resolve_config, build_pi_command, validate, bootstrap) + SettingsScreen UI (ThemePicker, AccentPicker, DensityPicker, PiBinaryPicker, ValidationStatus) + 4 Tauri commands + ~340 CSS lines (321 total tests) |
-| 2026-05-26 | generic | [20260526-fix-tokio-runtime-panic-in-setup_log.md](docs/devlog/20260526-fix-tokio-runtime-panic-in-setup_log.md) | Fixed startup panic: replaced `Handle::current()` with `Runtime::new()` in Tauri setup closure (lib.rs:30) |
-| 2026-05-26 | slice | [20260526-slice-3-sqlite-data-layer-and-fleet-management-issue5_log.md](docs/devlog/20260526-slice-3-sqlite-data-layer-and-fleet-management-issue5_log.md) | SQLite data layer (7 tables) + vessel CRUD (6 Tauri commands, 15 tests) + Fleet 3-col UI + VesselCard + AddVesselDialog (287 total tests) |
-| 2026-05-23 | issue | [20260523-fix-blank-window-after-issue4-chrome-implementation_issue4_log.md](docs/devlog/20260523-fix-blank-window-after-issue4-chrome-implementation_issue4_log.md) | Fixed blank window: Navigate context bug + duplicate .launcher grid + missing scroll containment (264 tests pass) |
-| 2026-05-22 | slice | [20260522-slice-2-component-extraction-and-tdd-test-suite-issue3_log.md](docs/devlog/20260522-slice-2-component-extraction-and-tdd-test-suite-issue3_log.md) | BottomNavBar extraction + keyboard shortcuts (1–5) + WelcomeScreen cards + OverlayLayout shell + responsive tests (264 total) |
-
-<!-- gitnexus:end -->
+| 2026-06-01 | slice | [20260601-slice-7-execution-view-tdd-ac-gap-fixes-issue9_log.md](docs/devlog/20260601-slice-7-execution-view-tdd-ac-gap-fixes-issue9_log.md) | **AC gap fixes (TDD):** unknown events + auto-scroll + virtualization + animation test. 14/14 AC met, 106 execution-view tests |
+| 2026-06-01 | slice | [20260601-slice-7-execution-view-ac-gap-fixes-issue9_log.md](docs/devlog/20260601-slice-7-execution-view-ac-gap-fixes-issue9_log.md) | **AC gap fixes:** Tauri events (9 tests) + TruncatedText (8 tests) + sessionId filter (3 tests). 14/14 AC met, 79 tests |
+| 2026-06-01 | slice | [20260601-slice-7-execution-view-issue9_log.md](docs/devlog/20260601-slice-7-execution-view-issue9_log.md) | Execution View: types + pi-store + 8 components + CSS. 67 new tests, 12/14 AC met |
+| 2026-05-29 | slice | [20260529-slice-5-pi-event-pipeline-parser-and-state-machine-issue7_log.md](docs/devlog/20260529-slice-5-pi-event-pipeline-parser-and-state-machine-issue7_log.md) | Pi event parser + state machine reducer. 13/13 AC met, 74 tests |
+| 2026-05-29 | issue | [20260529-fix-settings-screen-state-and-config-persistence_issue6_log.md](docs/devlog/20260529-fix-settings-screen-state-and-config-persistence_issue6_log.md) | Fixed SettingsScreen reactive state + config persistence (29 tests) |
+| 2026-05-29 | slice | [20260529-slice-4-helm-settings-and-config-resolution-issue6_log.md](docs/devlog/20260529-slice-4-helm-settings-and-config-resolution-issue6_log.md) | Rust config module + SettingsScreen UI + 4 Tauri commands (321 total tests) |
+| 2026-05-26 | generic | [20260526-fix-tokio-runtime-panic-in-setup_log.md](docs/devlog/20260526-fix-tokio-runtime-panic-in-setup_log.md) | Fixed startup panic: Runtime::new() vs Handle::current() |
+| 2026-05-26 | slice | [20260526-slice-3-sqlite-data-layer-and-fleet-management-issue5_log.md](docs/devlog/20260526-slice-3-sqlite-data-layer-and-fleet-management-issue5_log.md) | SQLite data layer + vessel CRUD + Fleet UI (287 total tests) |
+| 2026-05-23 | issue | [20260523-fix-blank-window-after-issue4-chrome-implementation_issue4_log.md](docs/devlog/20260523-fix-blank-window-after-issue4-chrome-implementation_issue4_log.md) | Fixed blank window: Navigate context + grid + scroll containment (264 tests) |
+| 2026-05-22 | slice | [20260522-slice-2-component-extraction-and-tdd-test-suite-issue3_log.md](docs/devlog/20260522-slice-2-component-extraction-and-tdd-test-suite-issue3_log.md) | BottomNavBar + keyboard shortcuts + WelcomeScreen + OverlayLayout (264 total) |

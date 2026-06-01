@@ -72,7 +72,7 @@ export const SessionHeader: Component<SessionHeaderProps> = (props) => {
       </div>
 
       <div class="session-header__meta">
-        <span class={statusClass(props.status)}>
+        <span class={statusClass(props.status)} data-testid="status-badge">
           {props.status}
         </span>
         <span class="session-header__elapsed" title="Elapsed time">
