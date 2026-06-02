@@ -27,3 +27,22 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// Mock ResizeObserver (used by CommsDeckPanel)
+class MockResizeObserver implements ResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+vi.stubGlobal("ResizeObserver", MockResizeObserver);
+
+// Mock @tauri-apps/api/event listen (used by CommsDeckPanel + PiExecutionPanel)
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockResolvedValue(vi.fn()),
+  emit: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock @tauri-apps/api/core invoke (used by CommsDeckPanel)
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn().mockResolvedValue(undefined),
+}));

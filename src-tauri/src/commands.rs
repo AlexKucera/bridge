@@ -8,7 +8,7 @@ use crate::config::{self, BridgeConfig, ConfigError, ValidationReport};
 use crate::db::Pool;
 use crate::vessel::{self, Vessel, VesselError, VesselWithGit};
 use sqlx::Sqlite;
-use tauri::State;
+use tauri::{Emitter, Manager, State};
 
 
 /// Add a new vessel from a filesystem path.
@@ -159,8 +159,12 @@ pub async fn state_apply_event(
 use crate::pi_session::{self, Session, SessionMode, SessionRegistry};
 
 /// Launch a new Pi session.
+///
+/// For PTY-mode sessions, also starts the output event loop that bridges
+/// PTY stdout → mpsc → Tauri `app.emit_all("pty-output")` events.
 #[tauri::command]
 pub async fn session_launch(
+    app: tauri::AppHandle,
     pool: State<'_, Pool<Sqlite>>,
     registry: State<'_, SessionRegistry>,
     vessel_id: Option<i64>,
@@ -172,13 +176,42 @@ pub async fn session_launch(
     let overrides: config::LaunchOverrides = serde_json::from_str(&overrides_json)
         .map_err(|e| format!("Invalid overrides: {}", e))?;
     let global = config::load_config().map_err(|e| e.to_string())?;
-    let running = pi_session::launch(&pool, &registry, vessel_id, &session_mode, &prompt, &overrides, global.max_concurrency)
-        .await.map_err(|e| e.to_string())?;
+    let mut running = pi_session::launch(
+        &pool, &registry, vessel_id, &session_mode, &prompt, &overrides,
+        global.max_concurrency,
+    ).await.map_err(|e| e.to_string())?;
     let sid = running.session_id;
+
+    // For PTY sessions, start the output event loop
+    if session_mode == SessionMode::Pty {
+        if let Some(pty_session) = running.take_pty() {
+            use crate::pi_session::pty_output::{PtyOutputEvent, PtyOutputLoop};
+            let (tx, rx) = std::sync::mpsc::channel::<PtyOutputEvent>();
+            let _loop_handle = PtyOutputLoop::start(sid, pty_session, tx);
+
+            // Spawn background task: PtyOutputEvents → Tauri events
+            let app_clone = app.clone();
+            tokio::spawn(async move {
+                while let Ok(event) = rx.recv() {
+                    match event {
+                        PtyOutputEvent::Output(payload) => {
+                            if let Ok(json) = serde_json::to_value(&payload) {
+                                let _ = app_clone.emit("pty-output", json);
+                            }
+                        }
+                        PtyOutputEvent::Exit(exit_payload) => {
+                            if let Ok(json) = serde_json::to_value(&exit_payload) {
+                                let _ = app_clone.emit("pty-exit", json);
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
     registry.insert(sid, running).await;
     pi_session::get_session(&pool, sid).await.map_err(|e| e.to_string())
 }
-
 /// Stop a running Pi session (SIGTERM -> grace period -> SIGKILL).
 #[tauri::command]
 pub async fn session_stop(
@@ -221,4 +254,27 @@ pub async fn session_get(
     session_id: i64,
 ) -> Result<Session, String> {
     pi_session::get_session(&pool, session_id).await.map_err(|e| e.to_string())
+}
+
+// -- PTY I/O Commands --
+
+/// Write data to a PTY session's stdin (sends keystrokes to Pi).
+#[tauri::command]
+pub async fn pty_write(
+    registry: State<'_, SessionRegistry>,
+    session_id: i64,
+    data: String,
+) -> Result<(), String> {
+    registry.pty_write(session_id, data.as_bytes()).await.map_err(|e| e.to_string())
+}
+
+/// Resize a PTY session's terminal window.
+#[tauri::command]
+pub async fn pty_resize(
+    registry: State<'_, SessionRegistry>,
+    session_id: i64,
+    cols: u16,
+    rows: u16,
+) -> Result<(), String> {
+    registry.pty_resize(session_id, cols, rows).await.map_err(|e| e.to_string())
 }

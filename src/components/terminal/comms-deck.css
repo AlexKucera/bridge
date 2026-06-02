@@ -1,0 +1,211 @@
+/* ─── CommsDeckPanel — Terminal Layout ───────────────────────── */
+
+.comms-deck-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: #0a0e14;
+  color: #b3b1ad;
+  overflow: hidden;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+/* ─── Status Bar ──────────────────────────────────────────────── */
+
+.comms-deck-panel__status-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  min-height: 26px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 153, 64, 0.15);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  user-select: none;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.comms-deck-panel__status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #62666e;
+  flex-shrink: 0;
+}
+
+.comms-deck-panel__status-dot--active {
+  background-color: #7bc477;
+  box-shadow: 0 0 6px rgba(123, 196, 119, 0.5);
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+.comms-deck-panel__status-dot--exited {
+  background-color: #c5b86f;
+}
+
+.comms-deck-panel__status-dot--error {
+  background-color: #c5797b;
+  box-shadow: 0 0 6px rgba(197, 121, 123, 0.5);
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.comms-deck-panel__status-text {
+  color: #62666e;
+}
+
+.comms-deck-panel__status-bar:has(.comms-deck-panel__status-dot--active)
+  .comms-deck-panel__status-text {
+  color: #7bc477;
+}
+
+.comms-deck-panel__error-msg {
+  margin-left: auto;
+  color: #c5797b;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Terminal Container (xterm.js host) ──────────────────────── */
+
+.comms-deck-panel__terminal {
+  flex: 1 1 auto;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* Override xterm.js default padding */
+.comms-deck-panel__terminal .xterm {
+  height: 100%;
+  padding: 4px 8px;
+}
+
+/* ─── Empty State ─────────────────────────────────────────────── */
+
+.comms-deck-panel__empty-state {
+  position: absolute;
+  inset: 40px auto auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #3d4249;
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.3s ease;
+}
+
+.comms-deck-panel__empty-icon {
+  font-size: 10px;
+  animation: empty-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes empty-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+/* Hide once output arrives (handled by Show component, but CSS fallback) */
+.comms-deck-panel:has(.xterm-viewport) .comms-deck-panel__empty-state {
+  display: none;
+}
+
+/* ─── Scan-Line Overlay (CRT Effect) ──────────────────────────── */
+
+.scanline-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  overflow: hidden;
+  transition: opacity 0.3s ease;
+}
+
+.scanline-overlay--visible {
+  opacity: 1;
+}
+
+/* The scan line itself — a gradient bar that sweeps top-to-bottom */
+.scanline-overlay--visible::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 153, 64, 0.04),
+    rgba(255, 153, 64, 0.08),
+    rgba(255, 153, 64, 0.04),
+    transparent
+  );
+  animation: scanline-sweep 4.5s linear infinite;
+  box-shadow:
+    0 0 20px rgba(255, 153, 64, 0.03),
+    0 0 60px rgba(255, 153, 64, 0.02);
+}
+
+@keyframes scanline-sweep {
+  0% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(calc(100vh + 10px));
+  }
+}
+
+/* Subtle horizontal scan-line texture (static lines) */
+.scanline-overlay--visible::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+  opacity: 0.5;
+}
+
+.scanline-overlay--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ─── Reduced Motion ──────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .scanline-overlay--visible::before {
+    animation: none;
+    /* Static glow bar at top instead of sweep */
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 153, 64, 0.03),
+      transparent 30px
+    );
+  }
+
+  .comms-deck-panel__status-dot--active {
+    animation: none;
+  }
+
+  .comms-deck-panel__empty-icon {
+    animation: none;
+    opacity: 0.5;
+  }
+}

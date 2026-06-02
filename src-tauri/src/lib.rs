@@ -10,7 +10,8 @@ pub mod events;
 use commands::{config_detect_binary, config_get, config_save, config_validate,
   event_parse_line, event_parse_jsonl, state_create_session, state_apply_event,
   vessel_add, vessel_get, vessel_list, vessel_list_with_git, vessel_remove, vessel_rename,
-  session_launch, session_stop, session_retry, session_list, session_get};
+  session_launch, session_stop, session_retry, session_list, session_get,
+  pty_write, pty_resize};
 use crate::pi_session::SessionRegistry;
 use db::open_database;
 use db::migrate;
@@ -69,6 +70,8 @@ pub fn run() {
       session_retry,
       session_list,
       session_get,
+      pty_write,
+      pty_resize,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

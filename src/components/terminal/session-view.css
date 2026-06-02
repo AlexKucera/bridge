@@ -1,0 +1,28 @@
+/* SessionViewContainer — layout for tabbed session view */
+
+.session-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--abyss, #0a0e14);
+}
+
+/* ─── Panel Slots ───────────────────────────────────── */
+
+.session-view__panel {
+  flex: 1;
+  min-height: 0; /* Allow flex child to shrink below content size */
+  overflow: hidden;
+  position: relative;
+}
+
+/* Hidden panel: off-screen but still mounted (preserves state) */
+.session-view__panel--hidden {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+}

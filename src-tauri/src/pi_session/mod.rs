@@ -4,6 +4,13 @@
 
 #![allow(dead_code)]
 
+pub mod pty;
+pub mod pty_output;
+
+#[cfg(test)]
+mod pty_output_tests;
+mod pty_integration_tests;
+
 use serde::{Deserialize, Serialize};
 use sqlx::Sqlite;
 use crate::config;
@@ -59,6 +66,8 @@ pub enum SessionError {
     AtCapacity { current: usize, max: u32 },
     #[error("Session error: {0}")]
     Other(String),
+    #[error("Session not running: {0}")]
+    NotRunning(i64),
 }
 
 // -- Pre-flight Types --
@@ -246,18 +255,43 @@ impl SessionRegistry {
         self.inner.read().await.contains_key(&id)
     }
 
+    /// Remove and return a session (for stop/teardown).
     pub async fn take(&self, id: i64) -> Option<RunningSession> {
         self.inner.write().await.remove(&id)
     }
 
-    pub async fn remove(&self, id: i64) {
-        self.inner.write().await.remove(&id);
+    /// Remove a session by ID, returning it if it existed.
+    pub async fn remove(&self, id: i64) -> Option<RunningSession> {
+        self.inner.write().await.remove(&id)
     }
 
+    /// Count the number of active (running) sessions.
     pub async fn count_active(&self) -> usize {
         self.inner.read().await.len()
     }
-}
+
+    /// Write data to a PTY session's stdin. Returns error if not found or not a PTY.
+    pub async fn pty_write(&self, session_id: i64, data: &[u8]) -> Result<(), SessionError> {
+        let guard = self.inner.read().await;
+        let running = guard.get(&session_id)
+            .ok_or(SessionError::NotRunning(session_id))?;
+        match &running.process {
+            SessionProcess::Pty(pty) => { pty.write(data).map_err(|e| SessionError::Other(e.to_string()))?; Ok(()) }
+            SessionProcess::Child(_) => Err(SessionError::Other("Cannot write to non-PTY session".to_string())),
+            SessionProcess::Taken => Err(SessionError::Other("PTY session was taken".to_string())),
+        }
+    }
+    /// Resize a PTY session's terminal. Returns error if not found or not a PTY.
+    pub async fn pty_resize(&self, session_id: i64, cols: u16, rows: u16) -> Result<(), SessionError> {
+        let guard = self.inner.read().await;
+        let running = guard.get(&session_id)
+            .ok_or(SessionError::NotRunning(session_id))?;
+        match &running.process {
+            SessionProcess::Pty(pty) => pty.resize(cols, rows).map_err(|e| SessionError::Other(e.to_string())),
+            SessionProcess::Child(_) => Err(SessionError::Other("Cannot resize non-PTY session".to_string())),
+            SessionProcess::Taken => Err(SessionError::Other("PTY session was taken".to_string())),
+        }
+}}
 
 impl Default for SessionRegistry {
     fn default() -> Self {
@@ -267,13 +301,44 @@ impl Default for SessionRegistry {
 
 // -- Running Session --
 
-/// Handle to an active child process plus its metadata.
+/// Enum holding either a regular stdio Child or a PTY session.
+pub enum SessionProcess {
+    /// Regular tokio child process with piped stdio (JSON mode).
+    Child(tokio::process::Child),
+    /// PTY session with master handle (interactive terminal mode).
+    Pty(crate::pi_session::pty::PtySession),
+    /// Sentinel: PTY was taken by take_pty(). Accessing this is a bug.
+    Taken,
+}
+
+/// Handle to an active session process plus its metadata.
 pub struct RunningSession {
     pub session_id: i64,
     pub meta: SessionMeta,
-    pub child: tokio::process::Child,
+    pub process: SessionProcess,
 }
 
+impl RunningSession {
+    /// Returns true if this session is running in PTY mode.
+    pub fn is_pty(&self) -> bool {
+        matches!(self.process, SessionProcess::Pty(_))
+    }
+
+    /// Returns true if this session is running as a regular child process.
+    pub fn is_child(&self) -> bool {
+        matches!(self.process, SessionProcess::Child(_))
+    }
+
+    /// Take ownership of the PtySession, leaving the process field in an invalid state.
+    /// Only call this once — after taking, is_pty() will return false.
+    pub fn take_pty(&mut self) -> Option<crate::pi_session::pty::PtySession> {
+        if let SessionProcess::Pty(pty) = std::mem::replace(&mut self.process, SessionProcess::Taken) {
+            Some(pty)
+        } else {
+            None
+        }
+    }
+}
 // -- Launch --
 
 /// Spawn a new Pi session: validate, check capacity, build command, insert DB record, fork process.
@@ -328,15 +393,25 @@ pub async fn launch(
     let session =
         create_session_record(pool, vessel_id, mode, prompt, &model, &provider).await?;
 
-    // Spawn child process
-    let child = tokio::process::Command::new(&binary)
-        .args(&args)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .map_err(|e| SessionError::Other(format!("Failed to spawn {}: {}", binary, e)))?;
-
-    let pid = child.id();
+    // Spawn process (PTY or regular stdio depending on mode)
+    let (process, pid) = match mode {
+        SessionMode::Pty => {
+            let pty = crate::pi_session::pty::PtySession::spawn(
+                &binary, &args, None,
+            ).map_err(|e| SessionError::Other(format!("PTY spawn failed: {}", e)))?;
+            (SessionProcess::Pty(pty), None)
+        }
+        SessionMode::Json => {
+            let child = tokio::process::Command::new(&binary)
+                .args(&args)
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
+            .spawn()
+            .map_err(|e| SessionError::Other(format!("Failed to spawn {}: {}", binary, e)))?;
+            let pid = child.id();
+            (SessionProcess::Child(child), pid)
+        }
+    };
 
     // Update status to Idle (waiting for first event)
     update_session_status(pool, session.id, "Idle").await?;
@@ -350,7 +425,7 @@ pub async fn launch(
             started_at: std::time::Instant::now(),
             pid,
         },
-        child,
+        process,
     })
 }
 
@@ -400,7 +475,7 @@ pub async fn read_stdout_loop(
 
 // -- Stop (Graceful Shutdown) --
 
-/// Gracefully stop a session: SIGTERM, wait grace period, then SIGKILL.
+/// Gracefully stop a session: SIGTERM/kill, wait grace period, then force kill.
 pub async fn stop(
     pool: &Pool<Sqlite>,
     registry: &SessionRegistry,
@@ -414,25 +489,36 @@ pub async fn stop(
 
     update_session_status(pool, session_id, "Stopping").await?;
 
-    // Send SIGTERM
-    if let Some(pid) = running.child.id() {
-        let _ = std::process::Command::new("kill")
-            .arg("-TERM")
-            .arg(pid.to_string())
-            .output();
-    }
-
-    // Wait with grace period
-    use tokio::time::{timeout, Duration};
-    let grace = Duration::from_millis(grace_period_ms);
-    match timeout(grace, running.child.wait()).await {
-        Ok(_) => {}
-        Err(_) => {
-            // Force kill after grace period
-            let _ = running.child.kill().await;
-            let _ = running.child.wait().await;
+    // Terminate based on process type
+    match &mut running.process {
+        SessionProcess::Child(child) => {
+            // Send SIGTERM via kill command for graceful shutdown
+            if let Some(pid) = child.id() {
+                let _ = std::process::Command::new("kill")
+                    .arg("-TERM")
+                    .arg(pid.to_string())
+                    .output();
+            }
+            // Wait with grace period
+            use tokio::time::{timeout, Duration};
+            let grace = Duration::from_millis(grace_period_ms);
+            match timeout(grace, child.wait()).await {
+                Ok(_) => {}
+                Err(_) => {
+                    // Force kill after grace period
+                    let _ = child.kill().await;
+                    let _ = child.wait().await;
+                }
+            }
         }
-    }
+        SessionProcess::Pty(pty) => {
+            // PTY sessions use portable-pty's kill()
+            let _ = pty.kill();
+        }
+        SessionProcess::Taken => {
+            // Already taken — nothing to terminate
+        }
+    };
 
     update_session_status(pool, session_id, "Stopped").await?;
     get_session(pool, session_id).await
@@ -559,5 +645,58 @@ mod tests {
         let cmd = build_launch_command(&cfg, &overrides, "/tmp/s", &SessionMode::Json, "hi");
         let idx = cmd.iter().position(|a| a == "--model").unwrap();
         assert_eq!(cmd[idx + 1], "gpt-4o");
+    }
+
+    #[test]
+    fn test_running_session_pty_variant() {
+        use crate::pi_session::pty::PtySession;
+
+        // Spawn a real PTY session (using /usr/bin/true as test binary)
+        let pty = PtySession::spawn("/usr/bin/true", &[], None).unwrap();
+
+        // Build a RunningSession with the PTY variant
+        let session = RunningSession {
+            session_id: 1,
+            meta: SessionMeta {
+                session_id: 1,
+                vessel_id: None,
+                mode: SessionMode::Pty,
+                started_at: std::time::Instant::now(),
+                pid: None,
+            },
+            process: SessionProcess::Pty(pty),
+        };
+
+        assert_eq!(session.session_id, 1);
+        assert!(session.is_pty());
+        assert!(!session.is_child());
+    }
+
+    #[tokio::test]
+    async fn test_running_session_child_variant() {
+        use std::process::Stdio;
+
+        // Spawn a regular child process
+        let child = tokio::process::Command::new("/usr/bin/true")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("failed to spawn /usr/bin/true");
+
+        let session = RunningSession {
+            session_id: 2,
+            meta: SessionMeta {
+                session_id: 2,
+                vessel_id: None,
+                mode: SessionMode::Json,
+                started_at: std::time::Instant::now(),
+                pid: child.id(),
+            },
+            process: SessionProcess::Child(child),
+        };
+
+        assert_eq!(session.session_id, 2);
+        assert!(!session.is_pty());
+        assert!(session.is_child());
     }
 }

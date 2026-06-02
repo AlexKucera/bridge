@@ -43,3 +43,5 @@ dist/
 src-tauri/target/
 
 test-results/.last-run.json
+
+.pi/extensions/guardrails.json

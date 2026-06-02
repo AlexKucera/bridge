@@ -4,7 +4,25 @@ All notable changes to this project will be documented in this file. The format 
 
 ### feat
 
-- **pi-event:** add Pi JSONL event parser (src-tauri/src/pi_event/mod.rs): PiJsonEvent enum with 14 variants covering lifecycle (Session/AgentStart/AgentEnd), turn boundaries (TurnStart/TurnEnd), message boundaries (MessageStart/MessageEnd), streaming updates via AssistantMessageEvent (ThinkingDelta, TextDelta, ToolcallStart/Delta/End), tool execution lifecycle (ToolExecutionStart/Update/End), and forward-compat Unknown { raw} variant; ParseError enum (InvalidJson/TruncatedLine/Io); parse_line() sync parser with empty-line skip and 64KB line guard; parse_jsonl_stream() async Stream wrapper; truncate_field() for 64KB-per-field truncation with marker; 23 tests including real Pi --mode json fixtures (15 fixture files)
+- **terminal:** add Comms Deck PTY terminal with xterm.js integration, tab switching, scan-line overlay animation, and log-line color classifier (Issue #11):
+
+  - **Rust PTY backend** (src-tauri/src/pi_session/pty.rs + pty_output.rs): PtySession wrapping portable-pty with spawn/write/read/resize; PtyOutputPayload/PtyExitPayload with base64 encoding for binary-safe JSON transport; PtyOutputLoop reading stdout via blocking thread → mpsc channel; spawn_output_reader() for non-blocking output capture; run_output_loop() read-until-EOF with exit detection; 9 integration tests exercising full pipeline (echo, session ID propagation, timestamps, JSON serialization, base64 round-trip, multi-line, exit ordering)
+
+  - **Session infrastructure** (src-tauri/src/pi_session/mod.rs): SessionProcess::Taken sentinel variant for take_pty() extraction; RunningSession methods (is_pty, is_child, take_pty); session_launch Tauri command with full pipeline — parse mode → deserialize overrides → load config → launch session → if PTY: take_pty → create mpsc channel → start PtyOutputLoop → spawn tokio task forwarding events via app.emit("pty-output"/"pty-exit") → insert into registry
+
+  - **Tauri commands** (src-tauri/src/commands.rs + lib.rs): pty_write (stdin forwarding), pty_resize (terminal geometry sync), session_launch (full launch with PTY wiring); register all commands in invoke_handler
+
+  - **Frontend terminal** (src/components/terminal/): CommsDeckPanel with xterm.js Terminal, FitAddon, ResizeObserver, status bar (CONNECTED/EXITED states), keydown→invoke("pty_write") input path, listen("pty-output"/"pty-exit") event handlers with base64 decode; ScanLineOverlay with CSS @keyframes scanline-sweep animation, prefers-reduced-motion static fallback; inline SVG icons for terminal/tab UI
+
+  - **Tab architecture** (src/store/tab-store.ts + src/components/terminal/TabBar.tsx + SessionViewContainer.tsx): TabStore with activeTab signal, badge counts per-tab, auto-clear on switch; TabBar with ARIA tablist, inline SVG icons (Structured/Terminal), keyboard navigation; SessionViewContainer always-mounted pattern (visibility:hidden over display:none) preserving xterm.js state across switches; defaultMode mapping (json→Structured, pty→Terminal)
+
+  - **LogLineClassifier** (src/lib/log-line-classifier.ts): classifyLine() priority-ordered pattern matching (Error>Warn>Prompt>Info>Dim>Plain) tuned for Pi/CLI/shell output; getAnsiForClass() ANSI escape prefix mapping (bright colors 90-97 for dark-bg contrast); classifyAndColorize() integrated classification+colorization with reset sequences; configurable via LogLineClassifierConfig; wired into CommsDeckPanel term.write() path; 42 tests across 3 TDD cycles
+
+  - **Types & stores**: terminal-types.ts (PtyStatus, PtyOutputEvent), tab-types.ts (TabId, TabStoreOptions), pty-store.ts (PtyStore with status/output/clearState signals)
+
+  - **Dependencies**: xterm + xterm-addon-fit (npm), portable-pty (Cargo)
+
+  - **Tests**: 139 Rust (130 existing + 9 integration), 539 frontend (497 existing + 42 classifier); 11/11 acceptance criteria met
 
 - **execution:** add streaming animations and UX controls for Execution View (Issue #10): LiveIndicator phase badge with color-coded states and pulse animation for active phases (Thinking/RunningTool/StreamingText) — 8 tests; ResponseText character-by-character streaming with blinking cursor that disappears on complete — 4 tests; ThinkingBubble live streaming with ellipsis pulse animation while actively receiving deltas — 3 tests; ToolCallCard progress sweep shimmer for active states (Invoking/Streaming), green flash transition to Completed, red flash to Failed, live duration counter — 7 tests; TurnCard view controls — compact mode (~60% height reduction), font size via CSS variable, global thinking visibility toggle — 5 tests; SessionActionBar toolbar with Raw Terminal toggle (shell for Issue #11 xterm.js) and Export dropdown (Copy JSON/Markdown, Save to File) — 9 tests; streamingBatch performance utility coalesces rapid delta events into 16ms frame batches to prevent layout thrashing — 6 tests; ~226 lines CSS across all animations (@keyframes for live-pulse, cursor-blink, ellipsis-pulse, thinking-fade-in, progress-sweep, completed-flash, failed-flash); 42 new tests, 84 total execution-view tests, 14/14 acceptance criteria met
 
