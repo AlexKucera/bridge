@@ -3,6 +3,9 @@
 /// Slice 7: Structured Execution View components for rendering
 /// Pi's JSON event stream as a navigable turn-by-turn interface.
 
+export { LiveIndicator } from "./LiveIndicator";
+export type { LiveIndicatorProps } from "./LiveIndicator";
+
 export { SessionHeader } from "./SessionHeader";
 export type { SessionHeaderProps } from "./SessionHeader";
 
@@ -29,3 +32,6 @@ export type { UnknownEventCardProps } from "./UnknownEventCard";
 
 export { PiExecutionPanel } from "./PiExecutionPanel";
 export type { PiExecutionPanelProps } from "./PiExecutionPanel";
+
+export { SessionActionBar } from "./SessionActionBar";
+export type { SessionActionBarProps } from "./SessionActionBar";

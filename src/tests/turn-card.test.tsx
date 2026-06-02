@@ -103,4 +103,45 @@ describe("TurnCard", () => {
     await userEvent.click(header);
     expect(toggled).toBe(true);
   });
+
+  // ─── Compact Mode (Slice 8) ──────────────────────────
+
+  it("applies --compact CSS class when compact=true", () => {
+    render(() => <TurnCard {...makeTurn()} compact={true} />);
+    const el = screen.getByTestId("turn-card");
+    expect(el.classList.contains("turn-card--compact")).toBe(true);
+  });
+
+  it("hides body content when compact mode is active", () => {
+    render(() => (
+      <TurnCard
+        {...makeTurn({ promptText: "Visible?", responseText: "Response?" })}
+        compact={true}
+      />
+    ));
+    // In compact mode, body should be hidden regardless of isCollapsed
+    expect(screen.queryByText("Visible?")).toBeNull();
+    expect(screen.queryByText("Response?")).toBeNull();
+  });
+
+  // ─── Font Size (Slice 8) ──────────────────────────────
+
+  it("applies custom font size via CSS variable", () => {
+    render(() => <TurnCard {...makeTurn()} fontSize={18} />);
+    const el = screen.getByTestId("turn-card");
+    const style = getComputedStyle(el);
+    expect(el.style.getPropertyValue("--font-size")).toBe("18px");
+  });
+
+  // ─── Global Thinking Toggle (Slice 8) ─────────────────
+
+  it("hides thinking bubble when showThinking=false", () => {
+    render(() => (
+      <TurnCard
+        {...makeTurn({ thinkingText: "Hidden reasoning" })}
+        showThinking={false}
+      />
+    ));
+    expect(screen.queryByTestId("thinking-bubble")).toBeNull();
+  });
 });

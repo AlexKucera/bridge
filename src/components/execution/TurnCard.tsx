@@ -3,6 +3,9 @@
 /// Header: role icon + turn index + metrics summary.
 /// Body: user prompt text, ThinkingBubble slot, ToolCallCard list,
 ///       ResponseText slot. Click header to expand/collapse.
+///
+/// Supports compact mode (header-only), custom font size,
+/// and global thinking visibility toggle.
 
 import type { Component } from "solid-js";
 import type { TurnViewModel } from "../../lib/execution-types";
@@ -16,6 +19,12 @@ export interface TurnCardProps extends TurnViewModel {
   onToggleCollapse?: () => void;
   onToggleThinking?: () => void;
   onToggleToolCall?: (toolCallId: string) => void;
+  /** Compact mode: collapse all turns to header-only (~60% height reduction). */
+  compact?: boolean;
+  /** Custom font size in pixels for execution view text. */
+  fontSize?: number;
+  /** Global toggle to hide/show all ThinkingBubbles across all turns. */
+  showThinking?: boolean;
 }
 
 // ─── Role Icon ───────────────────────────────────────────────
@@ -34,10 +43,13 @@ function roleIcon(role: string): string {
 export const TurnCard: Component<TurnCardProps> = (props) => {
   const hasThinking = () => props.thinkingText.length > 0;
   const hasToolCalls = () => props.toolCalls.length > 0;
+  /** Body is visible when not collapsed AND not in compact mode. */
+  const bodyVisible = () => !props.isCollapsed && !props.compact;
 
   return (
     <div
-      class={`turn-card ${props.isCollapsed ? "turn-card--collapsed" : ""}`}
+      class={`turn-card${props.compact ? " turn-card--compact" : ""}${props.isCollapsed ? " turn-card--collapsed" : ""}`}
+      style={props.fontSize ? { "--font-size": `${props.fontSize}px` } as CSSStyleDeclaration : undefined}
       data-testid="turn-card"
       data-turn-id={props.id}
     >
@@ -58,12 +70,12 @@ export const TurnCard: Component<TurnCardProps> = (props) => {
           {props.toolCalls.length > 0 && ` · ${props.toolCalls.length} tools`}
         </span>
         <span class="turn-card__chevron" aria-hidden="true">
-          {props.isCollapsed ? "▶" : "▼"}
+          {props.isCollapsed || props.compact ? "▶" : "▼"}
         </span>
       </button>
 
-      {/* Body — hidden when collapsed */}
-      {!props.isCollapsed && (
+      {/* Body — hidden when collapsed OR compact */}
+      {bodyVisible() && (
         <div class="turn-card__body">
           {/* User prompt */}
           {props.promptText && (
@@ -72,8 +84,8 @@ export const TurnCard: Component<TurnCardProps> = (props) => {
             </div>
           )}
 
-          {/* Thinking */}
-          {hasThinking() && (
+          {/* Thinking — controlled by global toggle */}
+          {hasThinking() && props.showThinking !== false && (
             <ThinkingBubble
               text={props.thinkingText}
               isCollapsed={false}

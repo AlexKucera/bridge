@@ -1,7 +1,11 @@
 /// ToolCallCard — nested card showing a single tool invocation.
 ///
 /// Renders tool name badge (color-coded by category), target/args preview,
-/// status indicator (5 states), duration, and collapsible result preview.
+/// status indicator (5 states), duration, collapsible result preview.
+///
+/// Active states (Invoking, Streaming) show a progress sweep animation
+/// and spinner icon. Terminal transitions flash green (Completed) or
+/// red (Failed).
 
 import type { Component } from "solid-js";
 import type { ToolCallViewModel } from "../../lib/execution-types";
@@ -35,6 +39,38 @@ function statusConfig(status: ToolCallStatus): StatusConfig {
   }
 }
 
+// ─── State Classification ────────────────────────────────────
+
+const ACTIVE_TOOL_STATES = new Set<ToolCallStatus>([
+  ToolCallStatus.Invoking,
+  ToolCallStatus.Streaming,
+]);
+
+const TERMINAL_TOOL_STATES = new Set<ToolCallStatus>([
+  ToolCallStatus.Completed,
+  ToolCallStatus.Failed,
+]);
+
+export function isToolActive(status: ToolCallStatus): boolean {
+  return ACTIVE_TOOL_STATES.has(status);
+}
+
+export function isToolTerminal(status: ToolCallStatus): boolean {
+  return TERMINAL_TOOL_STATES.has(status);
+}
+
+// ─── CSS Class ───────────────────────────────────────────────
+
+function cardClass(status: ToolCallStatus, category: string): string {
+  const base = `tool-call ${category}`;
+  if (isToolActive(status)) return `${base} tool-call--active`;
+  if (status === ToolCallStatus.Completed) return `${base} tool-call--completed`;
+  if (status === ToolCallStatus.Failed) return `${base} tool-call--failed`;
+  return base;
+}
+
+// ─── Formatting ──────────────────────────────────────────────
+
 /** Format duration in ms to human-readable. */
 function formatDuration(ms: number): string {
   if (ms === 0) return "";
@@ -66,11 +102,16 @@ export const ToolCallCard: Component<ToolCallCardProps> = (props) => {
 
   return (
     <div
-      class={`tool-call ${category()}`}
+      class={cardClass(props.status, category())}
       data-testid="tool-call-card"
       role="article"
       aria-label={`Tool call: ${props.toolName}`}
     >
+      {/* Progress sweep for active states */}
+      {isToolActive(props.status) && (
+        <div class="tool-call__sweep" data-testid="tool-progress-sweep" aria-hidden="true" />
+      )}
+
       <div class="tool-call__header">
         <span class="tool-call__name" title={props.toolName}>
           {props.toolName}
@@ -78,11 +119,9 @@ export const ToolCallCard: Component<ToolCallCardProps> = (props) => {
         <span class={`tool-call__status ${cfg().testId}`} data-testid={cfg().testId} title={cfg().label}>
           {cfg().icon} {cfg().label}
         </span>
-        {props.durationMs > 0 && (
-          <span class="tool-call__duration" title="Duration">
-            {formatDuration(props.durationMs)}
-          </span>
-        )}
+        <span class="tool-call__duration" title="Duration">
+          {formatDuration(props.durationMs)}
+        </span>
       </div>
 
       {(props.target || Object.keys(props.arguments).length > 0) && (

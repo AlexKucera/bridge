@@ -25,4 +25,34 @@ describe("ResponseText", () => {
     const el = screen.getByRole("article");
     expect(el.className).toContain("response-text");
   });
+
+  // ─── Streaming (Slice 8) ──────────────────────────────
+
+  it("renders full text when not streaming", () => {
+    render(() => (
+      <ResponseText text="Hello, world!" isStreaming={false} streamedCharCount={-1} />
+    ));
+    expect(screen.getByRole("article").textContent).toBe("Hello, world!");
+  });
+
+  it("renders only first N chars when streaming", () => {
+    render(() => (
+      <ResponseText text="Hello, world!" isStreaming={true} streamedCharCount={5} />
+    ));
+    expect(screen.getByRole("article").textContent).toBe("Hello");
+  });
+
+  it("shows blinking cursor element when streaming", () => {
+    render(() => (
+      <ResponseText text="Hello, world!" isStreaming={true} streamedCharCount={5} />
+    ));
+    screen.getByTestId("streaming-cursor");
+  });
+
+  it("hides cursor when not streaming", () => {
+    render(() => (
+      <ResponseText text="Hello, world!" isStreaming={false} streamedCharCount={-1} />
+    ));
+    expect(screen.queryByTestId("streaming-cursor")).toBeNull();
+  });
 });

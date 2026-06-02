@@ -78,4 +78,59 @@ describe("ToolCallCard", () => {
     ));
     screen.getByText("/src/main.ts");
   });
+
+  // ─── Animations (Slice 8) ────────────────────────────
+
+  it("applies --active CSS class for Invoking state", () => {
+    render(() => (
+      <ToolCallCard {...makeToolCall({ status: ToolCallStatus.Invoking })} />
+    ));
+    const el = screen.getByTestId("tool-call-card");
+    expect(el.classList.contains("tool-call--active")).toBe(true);
+  });
+
+  it("applies --active CSS class for Streaming state", () => {
+    render(() => (
+      <ToolCallCard {...makeToolCall({ status: ToolCallStatus.Streaming })} />
+    ));
+    const el = screen.getByTestId("tool-call-card");
+    expect(el.classList.contains("tool-call--active")).toBe(true);
+  });
+
+  it("applies --completed CSS class for Completed state", () => {
+    render(() => (
+      <ToolCallCard {...makeToolCall({ status: ToolCallStatus.Completed, durationMs: 500 })} />
+    ));
+    const el = screen.getByTestId("tool-call-card");
+    expect(el.classList.contains("tool-call--completed")).toBe(true);
+  });
+
+  it("applies --failed CSS class for Failed state", () => {
+    render(() => (
+      <ToolCallCard {...makeToolCall({ status: ToolCallStatus.Failed })} />
+    ));
+    const el = screen.getByTestId("tool-call-card");
+    expect(el.classList.contains("tool-call--failed")).toBe(true);
+  });
+
+  it("renders progress sweep element for active states", () => {
+    render(() => (
+      <ToolCallCard {...makeToolCall({ status: ToolCallStatus.Invoking })} />
+    ));
+    screen.getByTestId("tool-progress-sweep");
+  });
+
+  it("does not render progress sweep for Completed state", () => {
+    render(() => (
+      <ToolCallCard {...makeToolCall({ status: ToolCallStatus.Completed, durationMs: 500 })} />
+    ));
+    expect(screen.queryByTestId("tool-progress-sweep")).toBeNull();
+  });
+
+  it("renders live duration for active states", () => {
+    render(() => (
+      <ToolCallCard {...makeToolCall({ status: ToolCallStatus.Invoking, durationMs: 2500 })} />
+    ));
+    screen.getByText((c) => c.includes("2.5s"));
+  });
 });

@@ -32,4 +32,28 @@ describe("ThinkingBubble", () => {
     await userEvent.click(screen.getByText(/thinking/i));
     expect(toggled).toBe(true);
   });
+
+  // ─── Streaming (Slice 8) ──────────────────────────────
+
+  it("shows ellipsis element when isStreaming=true", () => {
+    render(() => (
+      <ThinkingBubble text="Reasoning" isCollapsed={false} isStreaming={true} />
+    ));
+    screen.getByTestId("thinking-ellipsis");
+  });
+
+  it("does not show ellipsis when not streaming", () => {
+    render(() => (
+      <ThinkingBubble text="Reasoning" isCollapsed={false} isStreaming={false} />
+    ));
+    expect(screen.queryByTestId("thinking-ellipsis")).toBeNull();
+  });
+
+  it("applies streaming CSS class when actively streaming", () => {
+    render(() => (
+      <ThinkingBubble text="Reasoning" isCollapsed={false} isStreaming={true} />
+    ));
+    const el = screen.getByTestId("thinking-bubble");
+    expect(el.classList.contains("thinking-bubble--streaming")).toBe(true);
+  });
 });
