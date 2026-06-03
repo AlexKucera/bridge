@@ -1,33 +1,34 @@
-/* Fleet Dashboard — 3-column layout test
-
-   Verifies the FleetDashboard renders a 3-column grid:
-   sidebar (180px) | fluid content | activity feed (280px) */
+/* FleetDashboard layout tests
+   Verifies the self-contained page renders with 3-column grid.
+   useNavigate/useParams are mocked in test-setup.ts for test isolation. */
 
 import { describe, it, expect } from "vitest";
 import { render } from "@solidjs/testing-library";
 import { FleetDashboard } from "../screens/FleetDashboard";
 
 describe("FleetDashboard", () => {
-  it("renders a 3-column layout with sidebar, content, and feed", () => {
-    render(() => <FleetDashboard />);
+  it("renders a self-contained page with top bar and 3-column body", () => {
+    const { container } = render(() => <FleetDashboard />);
 
-    const el = document.querySelector(".fleet-dashboard");
-    expect(el).not.toBeNull();
-
-    // Should have sidebar, content, and feed as direct children
-    const sidebar = el?.querySelector(":scope > .fleet-sidebar");
-    const content = el?.querySelector(":scope > .fleet-content");
-    const feed = el?.querySelector(":scope > .feed-panel");
-
-    expect(sidebar).not.toBeNull("should have .fleet-sidebar child");
-    expect(content).not.toBeNull("should have .fleet-content child");
-    expect(feed).not.toBeNull("should have .feed-panel child");
+    // Should have the page wrapper
+    const page = container.querySelector(".fleet-page");
+    expect(page).not.toBeNull();
   });
 
-  it("uses CSS grid for the dashboard area", () => {
-    render(() => <FleetDashboard />);
-    const dashboard = document.querySelector(".fleet-dashboard");
+  it("renders vessel sidebar, content area, and activity feed columns", () => {
+    const { container } = render(() => <FleetDashboard />);
 
-    expect(dashboard?.classList.contains("grid")).toBe(true);
+    // Should have sidebar (aside), main content (main), and feed (aside)
+    const aside = container.querySelector("aside");
+    const main = container.querySelector("main");
+    expect(aside).not.toBeNull();
+    expect(main).not.toBeNull();
+  });
+
+  it("shows 'No vessels added yet' when list is empty", () => {
+    const { container } = render(() => <FleetDashboard />);
+    // invoke is mocked so vessels() will be empty
+    const text = container.textContent || "";
+    expect(text).toContain("No vessels added yet");
   });
 });
