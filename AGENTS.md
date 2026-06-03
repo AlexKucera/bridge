@@ -50,6 +50,7 @@ Session logs are written to `docs/devlog/` after each completed task, issue fix,
 
 | Date | Type | File | Summary |
 |------|------|------|---------|
+| 2026-06-03 | slice | [20260603-slice-11-post-session-flow-and-error-recovery-issue13_log.md](docs/devlog/20260603-slice-11-post-session-flow-and-error-recovery-issue13_log.md) | **Issue #13 Complete (11/11 AC):** ExitOutcome + finalize_session + preflight_hardening + SessionResultCard + store integration. **+19 tests** · 171 Rust · 576+ frontend |
 | 2026-06-03 | generic | [20260603-launch-session-pipeline-and-window-fixes_log.md](docs/devlog/20260603-launch-session-pipeline-and-window-fixes_log.md) | **7 bugs fixed:** setVesselPath + Object DOM leak + pty_write null + window size/persist + wrong pi CLI flags + missing JSON stdout reader + event format mapper + Tauri v2 payload parse (×3). 159/159 Rust · tsc clean |
 | 2026-06-03 | generic | [20260603-cargo-panel-bugfixes-tabbar-tests-and-ui-wiring_log.md](docs/devlog/20260603-cargo-panel-bugfixes-tabbar-tests-and-ui-wiring_log.md) | **Bug Fixes:** TabBar 15/15 tests ✅ + CargoPanel import fix + blank Cargo panel fix. tsc clean, 568/599 frontend |
 |------|------|------|---------|

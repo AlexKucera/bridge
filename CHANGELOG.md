@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file. The format 
 
 ### feat
 
+- **session:** add post-session finalization pipeline and result card (Issue #13):
+
+  - **Rust backend** (src-tauri/src/pi_session/mod.rs): ExitOutcome enum (Success/ErrorCode/Signal with Unix signal handling), SessionFinalizeResult struct, finalize_session() async function (DB update + duration computation), PreflightHardeningError enum + preflight_hardening() (binary/vessel-path/git-repo/writability checks); 12 Rust tests
+
+  - **Tauri command** (commands.rs + lib.rs): session_finalize command; wired into JSON-mode stdout loop exit path with pool cloning for async finalization; emits session-complete event
+
+  - **TypeScript types** (execution-types.ts): SessionResult + SessionResultCallbacks interfaces mirroring Rust structs
+
+  - **SessionResultCard component** (SessionResultCard.tsx): success/error states with ✓/✗ icons, duration/tokens/cost metrics, error message block, Review&Ship/Retry/Dismiss action buttons; 9 tests
+
+  - **Store integration** (pi-store.ts): sessionResult signal + setSessionResult/clearSessionResult methods
+
+  - **Panel wiring** (PiExecutionPanel.tsx): listens for session-complete Tauri event, shows SessionResultCard when terminal state reached
+
+  - **CSS** (bridge.css): .session-result-card* BEM styles (~120 lines) with dark theme support
+
 - **cargo:** add Git operations panel with diff review, commit, and push (Issue #12):
 
   - **Rust backend** (src-tauri/src/cargo/mod.rs): cargo_status (porcelain=v2 parser), cargo_diff (numstat+unified), cargo_commit (stage+commit), cargo_push (categorized errors), generate_commit_message (conventional format + co-author); 20 Rust tests

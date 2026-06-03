@@ -35,3 +35,6 @@ export type { PiExecutionPanelProps } from "./PiExecutionPanel";
 
 export { SessionActionBar } from "./SessionActionBar";
 export type { SessionActionBarProps } from "./SessionActionBar";
+
+export { SessionResultCard } from "./SessionResultCard";
+export type { SessionResultCardProps } from "./SessionResultCard";

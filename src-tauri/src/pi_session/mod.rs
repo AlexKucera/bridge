@@ -563,6 +563,158 @@ pub async fn retry(
     .await
 }
 
+// -- Session Finalization --
+
+/// Outcome of a Pi process exit.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExitOutcome {
+    Success,
+    ErrorCode(i32),
+    Signal(i32),
+}
+
+impl ExitOutcome {
+    pub fn from_exit_code(code: Option<i32>) -> Self {
+        match code {
+            Some(0) => ExitOutcome::Success,
+            Some(c) if c > 0 => ExitOutcome::ErrorCode(c),
+            Some(c) => ExitOutcome::Signal(128 - c),
+            None => ExitOutcome::Signal(9),
+        }
+    }
+
+    pub fn is_failure(&self) -> bool {
+        !matches!(self, ExitOutcome::Success)
+    }
+
+    pub fn description(&self) -> String {
+        match self {
+            ExitOutcome::Success => "completed successfully".to_string(),
+            ExitOutcome::ErrorCode(c) => format!("exited with code {}", c),
+            ExitOutcome::Signal(s) => format!("killed by signal {}", s),
+        }
+    }
+}
+
+/// Result of finalizing a session.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionFinalizeResult {
+    pub session_id: i64,
+    pub status: String,
+    pub exit_outcome: String,
+    pub duration_ms: u64,
+    pub tokens_used: i64,
+    pub total_cost: f64,
+    pub error_message: Option<String>,
+}
+
+/// Finalize a session: compute metrics, update DB, return result for events.
+pub async fn finalize_session(
+    pool: &Pool<Sqlite>,
+    session_id: i64,
+    outcome: &ExitOutcome,
+    tokens_used: i64,
+    total_cost: f64,
+    started_at: &Option<String>,
+) -> Result<SessionFinalizeResult, SessionError> {
+    let status = match outcome {
+        ExitOutcome::Success => "Completed".to_string(),
+        _ => "Error".to_string(),
+    };
+
+    let error_message = match outcome {
+        ExitOutcome::Success => None,
+        other => Some(format!("Session {}", other.description())),
+    };
+
+    let duration_ms = started_at
+        .as_ref()
+        .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+        .map(|started| {
+            let elapsed = chrono::Utc::now().signed_duration_since(started);
+            elapsed.num_milliseconds().max(0) as u64
+        })
+        .unwrap_or(0);
+
+    let now = chrono::Utc::now().to_rfc3339();
+    sqlx::query(
+        "UPDATE sessions SET status = ?1, completed_at = ?2, tokens_used = ?3, total_cost = ?4, error_message = ?5 WHERE id = ?6"
+    )
+        .bind(&status)
+        .bind(&now)
+        .bind(tokens_used)
+        .bind(total_cost)
+        .bind(&error_message)
+        .bind(session_id)
+        .execute(pool)
+        .await?;
+
+    Ok(SessionFinalizeResult {
+        session_id,
+        status,
+        exit_outcome: outcome.description(),
+        duration_ms,
+        tokens_used,
+        total_cost,
+        error_message,
+    })
+}
+
+// -- Pre-flight Hardening --
+
+#[derive(Debug, thiserror::Error)]
+pub enum PreflightHardeningError {
+    #[error("Binary not found: {0}")]
+    BinaryNotFound(String),
+    #[error("Binary is not executable: {0}")]
+    BinaryNotExecutable(String),
+    #[error("Vessel path does not exist: {0}")]
+    VesselPathNotFound(String),
+    #[error("Vessel path is not a git repository: {0}")]
+    NotAGitRepo(String),
+    #[error("Session directory is not writable: {0}")]
+    SessionDirNotWritable(String),
+}
+
+pub fn preflight_hardening(
+    cfg: &config::BridgeConfig,
+    vessel_path: Option<&str>,
+    session_dir: &str,
+) -> Result<(), PreflightHardeningError> {
+    preflight_check(cfg).map_err(|e| match e {
+        PreflightError::BinaryNotFound(p) => PreflightHardeningError::BinaryNotFound(p),
+        PreflightError::BinaryNotExecutable(p) => PreflightHardeningError::BinaryNotExecutable(p),
+        PreflightError::BinaryEmpty => PreflightHardeningError::BinaryNotFound("(empty path)".to_string()),
+    })?;
+
+    if let Some(vpath) = vessel_path {
+        let p = std::path::Path::new(vpath);
+        if !p.exists() {
+            return Err(PreflightHardeningError::VesselPathNotFound(vpath.to_string()));
+        }
+        if !p.join(".git").exists() {
+            return Err(PreflightHardeningError::NotAGitRepo(vpath.to_string()));
+        }
+    }
+
+    let dir = std::path::Path::new(session_dir);
+    if dir.exists() {
+        let probe = dir.join(".probe");
+        match std::fs::File::create(&probe) {
+            Ok(f) => drop(f),
+            Err(_) => return Err(PreflightHardeningError::SessionDirNotWritable(session_dir.to_string())),
+        }
+        let _ = std::fs::remove_file(probe);
+    } else {
+        if let Err(e) = std::fs::create_dir_all(dir) {
+            return Err(PreflightHardeningError::SessionDirNotWritable(format!("{} ({})", session_dir, e)));
+        }
+        let _ = std::fs::remove_dir(dir);
+    }
+
+    Ok(())
+}
+
 // -- Tests --
 
 #[cfg(test)]
@@ -713,5 +865,134 @@ mod tests {
         assert_eq!(session.session_id, 2);
         assert!(!session.is_pty());
         assert!(session.is_child());
+    }
+
+    // -- ExitOutcome tests --
+
+    #[test]
+    fn exit_outcome_success_from_zero() {
+        assert_eq!(ExitOutcome::from_exit_code(Some(0)), ExitOutcome::Success);
+    }
+
+    #[test]
+    fn exit_outcome_error_code_from_positive() {
+        match ExitOutcome::from_exit_code(Some(1)) {
+            ExitOutcome::ErrorCode(c) => assert_eq!(c, 1),
+            other => panic!("expected ErrorCode, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn exit_outcome_signal_from_negative() {
+        match ExitOutcome::from_exit_code(Some(-9)) {
+            ExitOutcome::Signal(s) => assert_eq!(s, 137), // 128 + 9 = SIGKILL
+            other => panic!("expected Signal, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn exit_outcome_signal_from_none() {
+        match ExitOutcome::from_exit_code(None) {
+            ExitOutcome::Signal(s) => assert_eq!(s, 9),
+            other => panic!("expected default Signal(9), got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn exit_outcome_success_is_not_failure() {
+        assert!(!ExitOutcome::Success.is_failure());
+    }
+
+    #[test]
+    fn exit_outcome_error_is_failure() {
+        assert!(ExitOutcome::ErrorCode(1).is_failure());
+        assert!(ExitOutcome::Signal(9).is_failure());
+    }
+
+    #[test]
+    fn exit_outcome_description_formats_correctly() {
+        assert_eq!(ExitOutcome::Success.description(), "completed successfully");
+        assert_eq!(ExitOutcome::ErrorCode(1).description(), "exited with code 1");
+        assert_eq!(ExitOutcome::Signal(11).description(), "killed by signal 11");
+    }
+
+    // -- preflight_hardening tests --
+
+    #[test]
+    fn hardening_rejects_missing_binary() {
+        let cfg = config::BridgeConfig {
+            pi_binary_path: "/no/such/binary".to_string(),
+            ..Default::default()
+        };
+        let result = preflight_hardening(&cfg, None, "/tmp/test-session");
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            PreflightHardeningError::BinaryNotFound(_) => (),
+            other => panic!("expected BinaryNotFound, got {}", other),
+        }
+    }
+
+    #[test]
+    fn hardening_rejects_nonexistent_vessel_path() {
+        let cfg = config::BridgeConfig {
+            pi_binary_path: "/usr/bin/true".to_string(),
+            ..Default::default()
+        };
+        let result = preflight_hardening(&cfg, Some("/no/such/vessel/path"), "/tmp/test-sess");
+        match result.unwrap_err() {
+            PreflightHardeningError::VesselPathNotFound(p) => assert!(p.contains("vessel")),
+            other => panic!("expected VesselPathNotFound, got {}", other),
+        }
+    }
+
+    #[test]
+    fn hardening_rejects_non_git_vessel_path() {
+        use std::fs;
+        let tmp = tempfile::TempDir::new().unwrap();
+        fs::write(tmp.path().join("README.md"), "hello").unwrap();
+
+        let cfg = config::BridgeConfig {
+            pi_binary_path: "/usr/bin/true".to_string(),
+            ..Default::default()
+        };
+        let vpath = tmp.path().to_string_lossy().to_string();
+        let result = preflight_hardening(&cfg, Some(&vpath), "/tmp/test-sess");
+        match result.unwrap_err() {
+            PreflightHardeningError::NotAGitRepo(_) => (),
+            other => panic!("expected NotAGitRepo, got {}", other),
+        }
+    }
+
+    #[test]
+    fn hardening_accepts_writable_session_dir() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let sess_dir = tmp.path().join("session-test").to_string_lossy().to_string();
+
+        let cfg = config::BridgeConfig {
+            pi_binary_path: "/usr/bin/true".to_string(),
+            ..Default::default()
+        };
+        assert!(preflight_hardening(&cfg, None, &sess_dir).is_ok());
+    }
+
+    #[test]
+    fn hardening_accepts_git_repo_vessel_path() {
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let project_root = manifest_dir.parent().unwrap(); // src-tauri -> bridge
+
+        let cfg = config::BridgeConfig {
+            pi_binary_path: "/usr/bin/true".to_string(),
+            ..Default::default()
+        };
+        let result = preflight_hardening(
+            &cfg,
+            Some(&project_root.to_string_lossy()),
+            "/tmp/test-sess",
+        );
+        match result {
+            Ok(()) => (),
+            Err(PreflightHardeningError::SessionDirNotWritable(_)) => (),
+            Err(other) => panic!("unexpected error: {}", other),
+        }
     }
 }

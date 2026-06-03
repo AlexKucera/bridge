@@ -315,6 +315,8 @@ pub async fn session_launch(
         if let Some(mut child) = running.take_child() {
             let sid_str = sid.to_string();
             let app_clone = app.clone();
+            let pool_clone = pool.inner().clone();
+            let sid_for_finalize = sid;
             tokio::spawn(async move {
                 use tokio::io::{AsyncBufReadExt, BufReader};
                 if let Some(stdout) = child.stdout.take() {
@@ -340,10 +342,22 @@ pub async fn session_launch(
                         }
                     }
 
-                    // Child exited — emit final Done status
-                    let done = serde_json::json!({ "type": "status_changed", "sessionId": sid_str, "status": "Done" });
-                    let _ = app_clone.emit("execution-update", done);
-                    let _ = child.wait().await;
+                    // Child exited — finalize session
+                    let exit_code = child.wait().await.ok().and_then(|s| s.code());
+
+                    let outcome = pi_session::ExitOutcome::from_exit_code(exit_code);
+                    if let Ok(result) = pi_session::finalize_session(
+                        &pool_clone, sid_for_finalize, &outcome, 0, 0.0, &None,
+                    ).await {
+                        let _ = app_clone.emit(
+                            "session-complete",
+                            serde_json::to_value(&result).unwrap_or(serde_json::json!({})),
+                        );
+                    }
+
+                    // Emit Done/Error status for backward compat
+                    let status = if outcome.is_failure() { "Error" } else { "Done" };
+                    let done = serde_json::json!({ "type": "status_changed", "sessionId": sid_str, "status": status });
                 }
             });
         }
@@ -393,6 +407,28 @@ pub async fn session_get(
     session_id: i64,
 ) -> Result<Session, String> {
     pi_session::get_session(&pool, session_id).await.map_err(|e| e.to_string())
+}
+
+/// Finalize a session: capture exit outcome, compute metrics, update DB.
+///
+/// Call this when a Pi session ends (clean exit, crash, or user stop).
+/// Returns finalization data for UI display and event emission.
+#[tauri::command]
+pub async fn session_finalize(
+    pool: State<'_, Pool<Sqlite>>,
+    session_id: i64,
+    exit_code: Option<i32>,
+    tokens_used: i64,
+    total_cost: f64,
+) -> Result<pi_session::SessionFinalizeResult, String> {
+    // Fetch started_at for duration computation
+    let session = pi_session::get_session(&pool, session_id)
+        .await.map_err(|e| e.to_string())?;
+    
+    let outcome = pi_session::ExitOutcome::from_exit_code(exit_code);
+    pi_session::finalize_session(
+        &pool, session_id, &outcome, tokens_used, total_cost, &session.started_at,
+    ).await.map_err(|e| e.to_string())
 }
 
 // -- PTY I/O Commands --

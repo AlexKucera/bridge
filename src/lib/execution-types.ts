@@ -99,3 +99,23 @@ export const DEFAULT_UI_PREFS: UiPrefs = {
   fontSize: 14,
   showThinking: true,
 };
+
+// ─── Session Result ──────────────────────────────────────
+
+/** Result of a finalized Pi session. Mirrors Rust `SessionFinalizeResult`. */
+export interface SessionResult {
+  sessionId: number;
+  status: "Completed" | "Error" | "Stopped";
+  exitOutcome: string;
+  durationMs: number;
+  tokensUsed: number;
+  totalCost: number;
+  errorMessage: string | null;
+}
+
+/** Callbacks for SessionResultCard actions. */
+export interface SessionResultCallbacks {
+  onReviewShip: () => void;
+  onRetry: () => void;
+  onDismiss: () => void;
+}

@@ -12,6 +12,7 @@ import {
   type UiPrefs,
   DEFAULT_UI_PREFS,
   LiveState,
+  type SessionResult,
 } from "../lib/execution-types";
 
 // ─── Store Interface ────────────────────────────────────────
@@ -39,6 +40,13 @@ export interface PiExecutionStore {
 
   // Computed
   isSessionActive: () => boolean;
+}
+
+// ─── Session Result (post-session) ─────────────────────────────
+export interface SessionResultStore {
+  sessionResult: () => SessionResult | null;
+  setSessionResult: (result: SessionResult | null) => void;
+  clearSessionResult: () => void;
 }
 
 // ─── Execution Update Event ───────────────────────────────────
@@ -70,6 +78,7 @@ function defaultModel(): ExecutionViewModel {
     totalCost: 0,
     turns: [],
     unknownEvents: [],
+    sessionResult: null as SessionResult | null,
   };
 }
 
@@ -82,6 +91,7 @@ export function createPiExecutionStore(): PiExecutionStore {
   const [collapsedTurns, setCollapsedTurns] = createSignal<Set<number>>(new Set());
   const [hiddenToolCalls, setHiddenToolCalls] = createSignal<Set<string>>(new Set());
   const [uiPrefs, setUiPrefsSignal] = createSignal<UiPrefs>({ ...DEFAULT_UI_PREFS });
+  const [sessionResultSignal, setSessionResultSignal] = createSignal<SessionResult | null>(null);
 
   return {
     // Signals
@@ -194,5 +204,15 @@ export function createPiExecutionStore(): PiExecutionStore {
         || s === LiveState.StreamingText
         || s === LiveState.Starting;
     }),
+
+    sessionResult: () => sessionResultSignal(),
+
+    setSessionResult(result: SessionResult | null) {
+      setSessionResultSignal(result);
+    },
+
+    clearSessionResult() {
+      setSessionResultSignal(null);
+    },
   };
 }

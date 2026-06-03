@@ -1,24 +1,37 @@
 /// PiExecutionPanel — container component wrapping all execution view children.
 ///
 /// Receives a PiExecutionStore and sessionId prop. Wires store signals
-/// to SessionHeader, TurnList, and manages the overall layout.
-/// Subscribes to Tauri `execution-update` events on mount with cleanup.
+/// to SessionHeader, TurnList, SessionResultCard, and manages the overall layout.
+/// Subscribes to Tauri `execution-update` and `session-complete` events on mount with cleanup.
 
-import { onMount, onCleanup } from "solid-js";
+import { onMount, onCleanup, createSignal } from "solid-js";
 import type { Component } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
 import type { PiExecutionStore } from "../../store/pi-store";
 import type { ExecutionUpdateEvent } from "../../store/pi-store";
+import type { SessionResult } from "../../lib/execution-types";
+import { isLiveTerminal } from "./LiveIndicator";
 import { SessionHeader } from "./SessionHeader";
 import { TurnList } from "./TurnList";
+import { SessionResultCard } from "./SessionResultCard";
 
 export interface PiExecutionPanelProps {
   store: PiExecutionStore;
   sessionId: string;
+  /** Callback for "Review & Ship" — navigates to Cargo Panel */
+  onReviewShip?: () => void;
+  /** Callback for "Retry" — relaunches session */
+  onRetry?: () => void;
+  /** Callback for "Dismiss" — clears result card */
+  onDismiss?: () => void;
 }
 
 export const PiExecutionPanel: Component<PiExecutionPanelProps> = (props) => {
   const model = () => props.store.model();
+  const [result, setResult] = createSignal<SessionResult | null>(props.store.sessionResult());
+
+  const isTerminal = () => isLiveTerminal(model().status);
+  const showResult = () => isTerminal() && result() !== null;
 
   onMount(() => {
     // Initialize store model with our sessionId
@@ -27,7 +40,8 @@ export const PiExecutionPanel: Component<PiExecutionPanelProps> = (props) => {
       sessionId: props.sessionId,
     });
 
-    const unlisten = listen<string>("execution-update", (event) => {
+    // Listen for execution-update events (existing behavior)
+    const unlisten1 = listen<string>("execution-update", (event) => {
       try {
         // Tauri v2 may deliver payload as object or string
         const payload: ExecutionUpdateEvent = typeof event.payload === "string"
@@ -38,13 +52,26 @@ export const PiExecutionPanel: Component<PiExecutionPanelProps> = (props) => {
           props.store.applyEvent(payload);
         }
       } catch (e) {
-        // Malformed event payload — log but don't crash
         console.warn("[PiExecutionPanel] Failed to parse execution-update event:", e);
       }
     });
 
+    // Listen for session-complete events (new: post-session finalization)
+    const unlisten2 = listen<SessionResult>("session-complete", (event) => {
+      try {
+        const data = typeof event.payload === "string"
+          ? JSON.parse(event.payload)
+          : event.payload;
+        setResult(data);
+        props.store.setSessionResult(data);
+      } catch (e) {
+        console.warn("[PiExecutionPanel] Failed to parse session-complete event:", e);
+      }
+    });
+
     onCleanup(() => {
-      unlisten.then((fn) => fn());
+      unlisten1.then((fn) => fn());
+      unlisten2.then((fn) => fn());
     });
   });
 
@@ -65,6 +92,21 @@ export const PiExecutionPanel: Component<PiExecutionPanelProps> = (props) => {
         onToggleThinking={() => {}}
         onToggleToolCall={(turnId, tcId) => props.store.toggleToolCallVisibility(turnId, tcId)}
       />
+
+      {showResult() && (
+        <SessionResultCard
+          result={result()!}
+          callbacks={{
+            onReviewShip: () => props.onReviewShip?.(),
+            onRetry: () => props.onRetry?.(),
+            onDismiss: () => {
+              setResult(null);
+              props.store.clearSessionResult();
+              props.onDismiss?.();
+            },
+          }}
+        />
+      )}
     </div>
   );
 };
