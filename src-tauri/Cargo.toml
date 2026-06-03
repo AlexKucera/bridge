@@ -29,5 +29,6 @@ thiserror = "2"
 dirs = "5"
 chrono = "0.4"
 base64 = "0.22"
+gix = { version = "0.70", default-features = false, features = ["max-performance-safe", "worktree-mutation"] }
 [dev-dependencies]
 tempfile = "3"

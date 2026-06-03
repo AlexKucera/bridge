@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file. The format 
 
 ### feat
 
+- **cargo:** add Git operations panel with diff review, commit, and push (Issue #12):
+
+  - **Rust backend** (src-tauri/src/cargo/mod.rs): cargo_status (porcelain=v2 parser), cargo_diff (numstat+unified), cargo_commit (stage+commit), cargo_push (categorized errors), generate_commit_message (conventional format + co-author); 20 Rust tests
+
+  - **Tauri commands** (commands.rs + lib.rs): 5 async commands (cargo_status, cargo_diff, cargo_commit, cargo_push, cargo_generate_message) with explicit std::result::Result return type
+
+  - **Frontend types** (cargo-types.ts): TypeScript mirrors of all Rust enums/structs + changeTypeIcon/changeTypeColor helpers; 8 tests
+
+  - **Frontend store** (cargo-store.ts): SolidJS factory store with fetchStatus/fetchDiff/selectFile/setCommitMessage/setSail/generateMessage/refresh actions; mocked invoke for testing; 11 tests
+
+  - **UI components** (components/cargo/): SummaryStatsBar (colored +/-/~ stats), FileDiffList (change-type icons, monospace paths), DiffSnippetViewer (unified diff, green/red/grey lines, JetBrains Mono), CommitMessageEditor (char/line indicators), ConflictWarningBanner (merge/conflict state), SetSailButton (⚓ spinner), CargoPanel (orchestrator with toasts, split-pane layout)
+
+  - **CSS** (cargo.css): Dark-theme styling matching Bridge design system; diff syntax highlighting; Set Sail gradient button with hover animation
+
+  - **Bug fixes**: TabBar test IDs (tab-badge-* prefix) and class names (tab-bar__tab--active) — 15/15 passing; CargoPanel default import fix; blank panel fix (always-create store pattern)
+
 - **vessel:** wire vessel click → detail → launch flow (post-Issue #11):
 
   - **VesselDetailScreen** full rewrite: loads vessel data via `vessel_get` command, shows info card with Launch button, integrates LaunchDialog for mode/prompt/template selection, creates TabStore+PtyStore+PiExecutionStore on launch, renders SessionViewContainer with terminal tabs post-launch

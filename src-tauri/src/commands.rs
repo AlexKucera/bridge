@@ -278,3 +278,49 @@ pub async fn pty_resize(
 ) -> Result<(), String> {
     registry.pty_resize(session_id, cols, rows).await.map_err(|e| e.to_string())
 }
+
+// -- Cargo (Git) Commands --
+
+use crate::cargo::{self, SessionContext};
+
+/// Get git status for a vessel's repository.
+#[tauri::command]
+pub async fn cargo_status(vessel_path: String) -> std::result::Result<cargo::StatusResult, String> {
+    match cargo::cargo_status(std::path::Path::new(&vessel_path)) {
+        Ok(r) => Ok(r),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Get git diff for a vessel's repository.
+#[tauri::command]
+pub async fn cargo_diff(vessel_path: String) -> std::result::Result<cargo::DiffResult, String> {
+    match cargo::cargo_diff(std::path::Path::new(&vessel_path)) {
+        Ok(r) => Ok(r),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Stage all changes and commit with the given message.
+#[tauri::command]
+pub async fn cargo_commit(vessel_path: String, message: String) -> std::result::Result<cargo::CommitResult, String> {
+    match cargo::cargo_commit(std::path::Path::new(&vessel_path), &message) {
+        Ok(r) => Ok(r),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Push commits to remote.
+#[tauri::command]
+pub async fn cargo_push(vessel_path: String) -> std::result::Result<cargo::PushResult, String> {
+    match cargo::cargo_push(std::path::Path::new(&vessel_path)) {
+        Ok(r) => Ok(r),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Generate a conventional commit message from session context.
+#[tauri::command]
+pub async fn cargo_generate_message(context: SessionContext) -> std::result::Result<String, String> {
+    Ok(cargo::generate_commit_message(&context))
+}
