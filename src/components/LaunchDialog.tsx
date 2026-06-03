@@ -14,7 +14,23 @@ export interface LaunchDialogProps {
   /** Callback when the dialog is dismissed. */
   onClose: () => void;
   /** Callback invoked with the new session ID after successful launch. */
-  onLaunched?: (sessionId: number) => void;
+  onLaunched?: (sessionId: number, mode: string) => void;
+}
+
+/** Raw session object returned by Rust `session_launch` command. */
+export interface LaunchedSession {
+  id: number;
+  vesselId: number;
+  mode: string;
+  model: string;
+  prompt: string;
+  provider: string;
+  status: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  errorMessage: string | null;
+  tokensUsed: number;
+  totalCost: number;
 }
 
 /**
@@ -64,14 +80,16 @@ export function LaunchDialog(props: LaunchDialogProps) {
     if (!canLaunch()) return;
     setLaunching(true);
     try {
-      const sessionId = await invoke<number>("session_launch", {
+      const session = await invoke<LaunchedSession>("session_launch", {
         vesselId: props.vesselId,
         mode: mode(),
         prompt: prompt().trim(),
         overridesJson: "{}",
       });
+      // Rust returns full Session object; extract numeric ID
+      const sessionId = typeof session === "object" && session != null ? session.id : Number(session);
       setResult({ sessionId });
-      props.onLaunched?.(sessionId);
+      props.onLaunched?.(sessionId, mode());
     } catch (e: any) {
       console.error("Launch failed:", e);
     } finally {

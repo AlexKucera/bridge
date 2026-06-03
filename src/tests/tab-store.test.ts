@@ -10,8 +10,8 @@ import { createTabStore } from "../store/tab-store";
 // ─── TabId Enum ────────────────────────────────────────────────
 
 describe("TabId", () => {
-  it("has exactly two variants", () => {
-    expect(Object.values(TabId)).toEqual(["Structured", "Terminal"]);
+  it("has three variants", () => {
+    expect(Object.values(TabId)).toEqual(["Structured", "Terminal", "Cargo"]);
   });
 });
 
@@ -19,10 +19,11 @@ describe("TabId", () => {
 
 describe("DEFAULT_TAB_BADGE_COUNTS", () => {
   // Import after we create the file; for now test via store factory
-  it("starts at zero for both tabs", () => {
+  it("starts at zero for all three tabs", () => {
     const store = createTabStore();
     expect(store.badgeCounts().structured).toBe(0);
     expect(store.badgeCounts().terminal).toBe(0);
+    expect(store.badgeCounts().cargo).toBe(0);
   });
 });
 
@@ -44,6 +45,11 @@ describe("TabStore", () => {
     expect(store.activeTab()).toBe(TabId.Terminal);
   });
 
+  it("switches to Cargo tab", () => {
+    store.setActiveTab(TabId.Cargo);
+    expect(store.activeTab()).toBe(TabId.Cargo);
+  });
+
   it("switches back to Structured", () => {
     store.setActiveTab(TabId.Terminal);
     store.setActiveTab(TabId.Structured);
@@ -53,10 +59,17 @@ describe("TabStore", () => {
   it("tracks whether Structured is active", () => {
     expect(store.isStructuredActive()).toBe(true);
     expect(store.isTerminalActive()).toBe(false);
+    expect(store.isCargoActive()).toBe(false);
 
     store.setActiveTab(TabId.Terminal);
     expect(store.isStructuredActive()).toBe(false);
     expect(store.isTerminalActive()).toBe(true);
+    expect(store.isCargoActive()).toBe(false);
+
+    store.setActiveTab(TabId.Cargo);
+    expect(store.isStructuredActive()).toBe(false);
+    expect(store.isTerminalActive()).toBe(false);
+    expect(store.isCargoActive()).toBe(true);
   });
 
   it("increments structured badge count", () => {
@@ -73,7 +86,16 @@ describe("TabStore", () => {
     expect(store.badgeCounts().terminal).toBe(1);
   });
 
-  it("clears badge count for active tab when switched to", () => {
+  it("increments cargo badge count", () => {
+    store.incrementBadge(TabId.Cargo);
+    expect(store.badgeCounts().cargo).toBe(1);
+
+    store.incrementBadge(TabId.Cargo);
+    store.incrementBadge(TabId.Cargo);
+    expect(store.badgeCounts().cargo).toBe(3);
+  });
+
+  it("clears badge count for active tab when switched to (Terminal)", () => {
     // Accumulate some badges while on Structured
     store.incrementBadge(TabId.Terminal);
     store.incrementBadge(TabId.Terminal);
@@ -82,8 +104,20 @@ describe("TabStore", () => {
     // Switch to Terminal — should clear its badge
     store.setActiveTab(TabId.Terminal);
     expect(store.badgeCounts().terminal).toBe(0);
-    // Structured badge untouched
+    // Structured and cargo badges untouched
     expect(store.badgeCounts().structured).toBe(0);
+    expect(store.badgeCounts().cargo).toBe(0);
+  });
+
+  it("clears badge count for active tab when switched to (Cargo)", () => {
+    store.incrementBadge(TabId.Cargo);
+    store.incrementBadge(TabId.Cargo);
+    expect(store.badgeCounts().cargo).toBe(2);
+
+    store.setActiveTab(TabId.Cargo);
+    expect(store.badgeCounts().cargo).toBe(0);
+    expect(store.badgeCounts().structured).toBe(0);
+    expect(store.badgeCounts().terminal).toBe(0);
   });
 
   it("clears badge count for Structured when switching to it", () => {
@@ -99,11 +133,13 @@ describe("TabStore", () => {
   it("clears all badges explicitly", () => {
     store.incrementBadge(TabId.Structured);
     store.incrementBadge(TabId.Terminal);
-    store.incrementBadge(TabId.Terminal);
+    store.incrementBadge(TabId.Cargo);
+    store.incrementBadge(TabId.Cargo);
 
     store.clearBadges();
     expect(store.badgeCounts().structured).toBe(0);
     expect(store.badgeCounts().terminal).toBe(0);
+    expect(store.badgeCounts().cargo).toBe(0);
   });
 
   it("sets default tab based on session mode (pty → Terminal)", () => {

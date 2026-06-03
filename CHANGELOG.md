@@ -81,6 +81,26 @@ All notable changes to this project will be documented in this file. The format 
 
 - **tauri:** fix startup panic caused by calling `tokio::runtime::Handle::current()` in Tauri setup closure where no Tokio runtime exists — replaced with `Runtime::new()` to create a dedicated runtime for DB init (lib.rs:30)
 
+- **launch:** fix session launch pipeline — 7 bugs resolved that prevented launched sessions from showing activity in the Structured tab:
+
+  - **CargoStore:** expose `setVesselPath()` on public interface (was private signal setter)
+
+  - **LaunchDialog:** fix `invoke<number>` on `session_launch` which returns full `Session` object — added `LaunchedSession` interface, extract numeric `.id`, pass mode through callback
+
+  - **Tab/PTY wiring:** JSON-mode launches defaulted to Terminal/PTY tab causing `pty_write: null sessionId` errors — forward mode from LaunchDialog, set correct default tab (`structured` for json, `pty` for pty), conditionally connect PTY store only when mode is pty, add defensive sessionId guard in CommsDeckPanel
+
+  - **Window sizing:** default 800×600 → 1280×800 with centering; add `tauri-plugin-window-state` for size/position persistence across launches
+
+  - **pi CLI flags:** fix `build_launch_command` — remove bogus `chat` subcommand (doesn't exist), `--output-format` → `--mode json`, add required `--print` flag for non-interactive piped stdout
+
+  - **JSON-mode stdout pipeline:** add `take_child()` to RunningSession; wire tokio stdout reader in `session_launch` that reads pi JSONL output line-by-line and emits Tauri events
+
+  - **Event format mapper:** add 100-line `map_pi_event()` translating pi CLI native event types into frontend's `ExecutionUpdateEvent` format — 12 type mappings with turn counter tracking and role-aware text delta routing
+
+  - **Tauri v2 payload parsing:** fix `JSON.parse(event.payload)` at 3 locations — Tauri v2 delivers payloads as objects not strings; added `typeof === "string"` guard
+
+  159/159 Rust tests pass, tsc clean
+
 
 ### feat
 

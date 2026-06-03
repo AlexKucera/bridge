@@ -1,4 +1,4 @@
-/// TabBar — tab switcher between Structured (execution view) and Terminal (PTY).
+/// TabBar — tab switcher between Structured (execution view), Terminal (PTY), and Cargo.
 ///
 /// Renders a horizontal tab bar with icons, labels, active-state
 /// indicators, and unread badge counts. Uses ARIA tablist pattern
@@ -37,6 +37,20 @@ function TerminalIcon() {
       class="tab-bar__icon" aria-hidden="true">
       <polyline points="4 17 10 11 4 5" />
       <line x1="12" y1="19" x2="20" y2="19" />
+    </svg>
+  );
+}
+
+/** SVG icon for the Cargo tab (anchor/ship icon). */
+function CargoIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+      class="tab-bar__icon" aria-hidden="true">
+      <circle cx="12" cy="5" r="3" />
+      <line x1="12" y1="8" x2="12" y2="16" />
+      <line x1="8" y1="16" x2="16" y2="16" />
+      <line x1="9" y1="19" x2="15" y2="19" />
     </svg>
   );
 }
@@ -90,6 +104,31 @@ export const TabBar: Component<TabBarProps> = (props) => {
             data-testid="tab-badge-terminal"
           >
             {props.store.badgeCounts().terminal}
+          </span>
+        </Show>
+      </button>
+
+      {/* Cargo tab */}
+      <button
+        role="tab"
+        aria-selected={props.store.isCargoActive()}
+        aria-controls="cargo-panel"
+        tabIndex={props.store.isCargoActive() ? 0 : -1}
+        classList={{
+          "tab-bar__tab": true,
+          "tab-bar__tab--active": props.store.isCargoActive(),
+        }}
+        onClick={() => props.store.setActiveTab(TabId.Cargo)}
+        data-testid="tab-cargo"
+      >
+        <CargoIcon />
+        <span class="tab-bar__label">Cargo</span>
+        <Show when={props.store.badgeCounts().cargo > 0}>
+          <span
+            class="tab-bar__badge"
+            data-testid="tab-badge-cargo"
+          >
+            {props.store.badgeCounts().cargo}
           </span>
         </Show>
       </button>

@@ -70,18 +70,23 @@ export function VesselDetailScreen() {
   });
 
   // Handle launch success
-  const handleLaunched = (sessionId: number) => {
+  const [launchMode, setLaunchMode] = createSignal<string>("json");
+
+  const handleLaunched = (sessionId: number, mode?: string) => {
     setLaunchedSessionId(sessionId);
     setDialogOpen(false);
+    setLaunchMode(mode ?? "json");
 
     // Create stores for this session
     const sid = String(sessionId);
-    setTabStore(createTabStore({ defaultMode: "pty" }));
+    setTabStore(createTabStore({ defaultMode: mode === "pty" ? "pty" : "structured" }));
     setPtyStore(createPtyStore());
     setExecStore(createPiExecutionStore());
 
-    // Connect PTY store
-    ptyStore()?.connect(sid);
+    // Connect PTY store only when PTY mode
+    if (mode === "pty") {
+      ptyStore()?.connect(sid);
+    }
   };
 
   // Cleanup stores on unmount
@@ -169,6 +174,7 @@ export function VesselDetailScreen() {
           ptyStore={ptyStore()!}
           execStore={execStore()!}
           sessionId={String(launchedSessionId())}
+          vesselPath={vessel()?.path}
         />
       </Show>
 

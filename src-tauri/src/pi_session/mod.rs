@@ -197,10 +197,10 @@ pub fn build_launch_command(
     prompt: &str,
 ) -> Vec<String> {
     let mut cmd = vec![];
-    if mode == &SessionMode::Json {
-        cmd.push("chat".into());
-    }
-    cmd.push("--output-format".into());
+    // Non-interactive mode: process prompt and exit (required for piped stdout)
+    cmd.push("--print".into());
+    // Output format: JSON events
+    cmd.push("--mode".into());
     cmd.push("json".into());
     if !session_dir.is_empty() {
         cmd.push("--session-dir".into());
@@ -217,7 +217,10 @@ pub fn build_launch_command(
         cmd.push("--provider".into());
         cmd.push(cfg.default_provider.clone());
     }
-    cmd.push(prompt.to_string());
+    // Prompt is the positional argument (last)
+    if !prompt.is_empty() {
+        cmd.push(prompt.to_string());
+    }
     cmd
 }
 
@@ -334,6 +337,16 @@ impl RunningSession {
     pub fn take_pty(&mut self) -> Option<crate::pi_session::pty::PtySession> {
         if let SessionProcess::Pty(pty) = std::mem::replace(&mut self.process, SessionProcess::Taken) {
             Some(pty)
+        } else {
+            None
+        }
+    }
+
+    /// Take ownership of the Child process, leaving the process field in Taken state.
+    /// Only call this once — after taking, is_child() will return false.
+    pub fn take_child(&mut self) -> Option<tokio::process::Child> {
+        if let SessionProcess::Child(child) = std::mem::replace(&mut self.process, SessionProcess::Taken) {
+            Some(child)
         } else {
             None
         }
@@ -569,10 +582,12 @@ mod tests {
         let cfg = config::BridgeConfig::default();
         let overrides = config::LaunchOverrides::default();
         let cmd = build_launch_command(&cfg, &overrides, "/tmp/test-session", &SessionMode::Json, "hello");
-        assert!(cmd.contains(&"chat".into()));
-        assert!(cmd.contains(&"--output-format".into()));
-        assert!(cmd.contains(&"json".into()));
-        assert!(cmd.contains(&"hello".into()));
+        assert!(cmd.contains(&"--print".into()), "expected --print, got: {:?}", cmd);
+        assert!(cmd.contains(&"--mode".into()), "expected --mode, got: {:?}", cmd);
+        assert!(cmd.contains(&"json".into()), "expected json, got: {:?}", cmd);
+        assert!(cmd.contains(&"hello".into()), "expected prompt, got: {:?}", cmd);
+        assert!(!cmd.contains(&"chat".into()), "should not contain 'chat'");
+        assert!(!cmd.contains(&"--output-format".into()), "should not contain --output-format");
     }
 
     #[test]

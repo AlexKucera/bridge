@@ -158,6 +158,108 @@ pub async fn state_apply_event(
 
 use crate::pi_session::{self, Session, SessionMode, SessionRegistry};
 
+// ── Pi JSONL → ExecutionUpdateEvent Mapper ───────────────────
+
+/// Extract plain text from a pi message content array.
+/// Content blocks: [{ type: "text", text: "..." }, ...]
+fn extract_text_content(content: Option<&serde_json::Value>) -> String {
+    match content {
+        Some(serde_json::Value::Array(arr)) => arr
+            .iter()
+            .filter_map(|block| block.get("text").and_then(|v| v.as_str()).map(|s| s.to_string()))
+            .collect::<Vec<_>>()
+            .join(" "),
+        Some(serde_json::Value::String(s)) => s.clone(),
+        _ => String::new(),
+    }
+}
+
+/// Map a pi CLI JSONL event type + payload into an `execution-update` Tauri event
+/// that matches the frontend's [`ExecutionUpdateEvent`](crate::store::pi_store) interface.
+fn map_pi_event(
+    event_type: &str,
+    parsed: &serde_json::Value,
+    sid_str: &str,
+    turn_counter: &mut u32,
+    current_role: &mut Option<String>,
+) -> Option<serde_json::Value> {
+    use serde_json::json;
+
+    match event_type {
+        "session" => Some(json!({
+            "type": "status_changed", "sessionId": sid_str, "status": "Running",
+        })),
+        "agent_start" => Some(json!({
+            "type": "status_changed", "sessionId": sid_str, "status": "Thinking",
+        })),
+        "turn_start" => {
+            *turn_counter += 1;
+            Some(json!({ "type": "new_turn", "sessionId": sid_str, "turnId": *turn_counter }))
+        }
+        "message_start" => parsed.get("message").and_then(|msg| {
+            let role = msg.get("role").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+            *current_role = Some(role.clone());
+            if role == "user" {
+                let text = extract_text_content(msg.get("content"));
+                Some(json!({
+                    "type": "new_turn", "sessionId": sid_str, "turnId": *turn_counter,
+                    "role": "user", "promptText": text,
+                }))
+            } else {
+                Some(json!({
+                    "type": "status_changed", "sessionId": sid_str, "status": "Running",
+                }))
+            }
+        }),
+        "text_delta" | "content_block_delta" => {
+            let delta = parsed.get("delta").or_else(|| parsed.get("text"))
+                .and_then(|v| v.as_str()).unwrap_or("");
+            if delta.is_empty() { return None; }
+            match current_role.as_deref() {
+                Some("assistant") | Some("model") => Some(json!({
+                    "type": "textDelta", "sessionId": sid_str, "turnId": *turn_counter as i64, "textDelta": delta,
+                })),
+                _ => None,
+            }
+        }
+        "thinking_delta" => {
+            let delta = parsed.get("delta").or_else(|| parsed.get("text"))
+                .and_then(|v| v.as_str()).unwrap_or("");
+            if delta.is_empty() { return None; }
+            Some(json!({
+                "type": "thinkingDelta", "sessionId": sid_str, "turnId": *turn_counter as i64, "thinkingDelta": delta,
+            }))
+        }
+        "tool_use_start" | "tool_call_start" => {
+            let name = parsed.get("name").or_else(|| parsed.get("tool_name"))
+                .and_then(|v| v.as_str()).unwrap_or("unknown");
+            let id = parsed.get("id").or_else(|| parsed.get("tool_call_id"))
+                .and_then(|v| v.as_str())
+                .unwrap_or(&format!("tc-{}", turn_counter)).to_string();
+            Some(json!({
+                "type": "new_tool_call", "sessionId": sid_str, "turnId": *turn_counter,
+                "toolId": id, "toolName": name, "status": "Running",
+            }))
+        }
+        "tool_use_end" | "tool_call_end" | "tool_result" => {
+            parsed.get("id").or_else(|| parsed.get("tool_call_id"))
+                .and_then(|v| v.as_str()).map(|tid| json!({
+                    "type": "tool_call_updated", "sessionId": sid_str, "turnId": *turn_counter,
+                    "toolId": tid, "status": "Completed",
+                }))
+        }
+        "message_end" | "turn_end" => Some(json!({
+            "type": "turn_updated", "sessionId": sid_str, "turnId": *turn_counter,
+        })),
+        "session_end" | "done" => Some(json!({
+            "type": "status_changed", "sessionId": sid_str, "status": "Done",
+        })),
+        _ => Some(json!({ // Unknown — pass through for debugging
+            "type": "unknown_event", "sessionId": sid_str, "raw": parsed,
+        })),
+    }
+}
+
 /// Launch a new Pi session.
 ///
 /// For PTY-mode sessions, also starts the output event loop that bridges
@@ -205,6 +307,43 @@ pub async fn session_launch(
                             }
                         }
                     }
+                }
+            });
+        }
+    } else if session_mode == SessionMode::Json {
+        // For JSON-mode sessions, read child stdout and translate pi JSONL → execution-update events
+        if let Some(mut child) = running.take_child() {
+            let sid_str = sid.to_string();
+            let app_clone = app.clone();
+            tokio::spawn(async move {
+                use tokio::io::{AsyncBufReadExt, BufReader};
+                if let Some(stdout) = child.stdout.take() {
+                    let reader = BufReader::new(stdout);
+                    let mut lines = reader.lines();
+                    let mut turn_counter: u32 = 0;
+                    let mut current_role: Option<String> = None;
+
+                    while let Ok(Some(line)) = lines.next_line().await {
+                        let trimmed = line.trim();
+                        if trimmed.is_empty() { continue; }
+
+                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(trimmed) {
+                            let event_type = parsed.get("type")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+
+                            let mapped = map_pi_event(&event_type, &parsed, &sid_str, &mut turn_counter, &mut current_role);
+
+                            if let Some(event) = mapped {
+                                let _ = app_clone.emit("execution-update", event);
+                            }
+                        }
+                    }
+
+                    // Child exited — emit final Done status
+                    let done = serde_json::json!({ "type": "status_changed", "sessionId": sid_str, "status": "Done" });
+                    let _ = app_clone.emit("execution-update", done);
+                    let _ = child.wait().await;
                 }
             });
         }

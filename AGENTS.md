@@ -50,6 +50,9 @@ Session logs are written to `docs/devlog/` after each completed task, issue fix,
 
 | Date | Type | File | Summary |
 |------|------|------|---------|
+| 2026-06-03 | generic | [20260603-launch-session-pipeline-and-window-fixes_log.md](docs/devlog/20260603-launch-session-pipeline-and-window-fixes_log.md) | **7 bugs fixed:** setVesselPath + Object DOM leak + pty_write null + window size/persist + wrong pi CLI flags + missing JSON stdout reader + event format mapper + Tauri v2 payload parse (×3). 159/159 Rust · tsc clean |
+| 2026-06-03 | generic | [20260603-cargo-panel-bugfixes-tabbar-tests-and-ui-wiring_log.md](docs/devlog/20260603-cargo-panel-bugfixes-tabbar-tests-and-ui-wiring_log.md) | **Bug Fixes:** TabBar 15/15 tests ✅ + CargoPanel import fix + blank Cargo panel fix. tsc clean, 568/599 frontend |
+|------|------|------|---------|
 | 2026-06-03 | generic | [20260603-cargo-panel-bugfixes-tabbar-tests-and-ui-wiring_log.md](docs/devlog/20260603-cargo-panel-bugfixes-tabbar-tests-and-ui-wiring_log.md) | **Bug Fixes:** TabBar 15/15 tests ✅ + CargoPanel import fix + blank Cargo panel fix. tsc clean, 568/599 frontend |
 | 2026-06-03 | slice | [20260603-slice-10-cargo-panel-and-git-operations-issue12_log.md](docs/devlog/20260603-slice-10-cargo-panel-and-git-operations-issue12_log.md) | **Issue #12 Complete (14/14 AC):** Cargo Panel — Rust cargo module (20 tests) + Tauri commands + TS types/store (19 tests) + 7 UI components + CSS. 159/159 Rust · 578+ frontend · **39 new cargo tests** |
 | 2026-06-02 | generic | [20260602-vessel-click-launch-flow-wiring_log.md](docs/devlog/20260602-vessel-click-launch-flow-wiring_log.md) | **Vessel Click → Launch Flow Fixed:** LaunchDialog missing imports root cause + VesselDetailScreen full rewrite + test fixes. 540/558 frontend pass, tsc clean |

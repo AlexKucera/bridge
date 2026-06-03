@@ -29,7 +29,10 @@ export const PiExecutionPanel: Component<PiExecutionPanelProps> = (props) => {
 
     const unlisten = listen<string>("execution-update", (event) => {
       try {
-        const payload: ExecutionUpdateEvent = JSON.parse(event.payload);
+        // Tauri v2 may deliver payload as object or string
+        const payload: ExecutionUpdateEvent = typeof event.payload === "string"
+          ? JSON.parse(event.payload)
+          : event.payload;
         // Only apply events destined for this session
         if (!payload.sessionId || payload.sessionId === props.sessionId) {
           props.store.applyEvent(payload);

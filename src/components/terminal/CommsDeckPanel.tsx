@@ -115,7 +115,10 @@ export const CommsDeckPanel: Component<CommsDeckPanelProps> = (props) => {
     // ── Subscribe to PTY output events ──
     const unlistenPty = listen<string>("pty-output", (event) => {
       try {
-        const payload = JSON.parse(event.payload);
+        // Tauri v2 may deliver payload as object or string
+        const payload = typeof event.payload === "string"
+          ? JSON.parse(event.payload)
+          : event.payload;
         // Only process events for our session
         if (!payload.sessionId || payload.sessionId === props.sessionId) {
           const data = payload.data || "";
@@ -176,7 +179,13 @@ if (text.length > 0 && term) {
       ev.preventDefault();
       ev.stopPropagation();
 
-      invoke("pty_write", { sessionId: Number(props.sessionId), data })
+      const sessionId = Number(props.sessionId);
+      if (!sessionId || !Number.isFinite(sessionId)) {
+        console.warn("[CommsDeckPanel] Skipping pty_write: invalid sessionId", props.sessionId);
+        return;
+      }
+
+      invoke("pty_write", { sessionId, data })
         .catch((err) => {
           console.warn("[CommsDeckPanel] pty_write failed:", err);
           props.store.setError(String(err));

@@ -34,6 +34,7 @@ export interface CargoStore {
   generateMessage: (ctx: SessionContext) => Promise<void>;
   refresh: (path: string) => Promise<void>;
   clearError: () => void;
+  setVesselPath: (path: string) => void;
   clearSuccess: () => void;
 }
 
@@ -149,6 +150,10 @@ export function createCargoStore(): CargoStore {
 
     clearError() {
       setError(null);
+    },
+
+    setVesselPath(path: string) {
+      setVesselPath(path);
     },
 
     clearSuccess() {

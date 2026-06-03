@@ -1,6 +1,6 @@
 /// Tab types for the Comms Deck tab switcher.
 ///
-/// Defines the two view tabs (Structured / Terminal), badge counting,
+/// Defines the three view tabs (Structured / Terminal / Cargo), badge counting,
 /// and session mode detection for default-tab selection.
 
 // ─── Tab Identifier ────────────────────────────────────────────
@@ -11,6 +11,8 @@ export enum TabId {
   Structured = "Structured",
   /** Interactive PTY terminal (xterm.js). */
   Terminal = "Terminal",
+  /** Git diff review and commit/ship interface (Cargo Panel). */
+  Cargo = "Cargo",
 }
 
 // ─── Badge Counts ──────────────────────────────────────────────
@@ -19,18 +21,32 @@ export enum TabId {
 export interface TabBadgeCounts {
   structured: number;
   terminal: number;
+  cargo: number;
 }
 
-/** Default: no unread activity on either tab. */
+/** Default: no unread activity on any tab. */
 export const DEFAULT_TAB_BADGE_COUNTS: TabBadgeCounts = {
   structured: 0,
   terminal: 0,
+  cargo: 0,
 };
 
 // ─── Session Mode ──────────────────────────────────────────────
 
 /** How a Pi session was launched — determines default tab. */
 export type SessionMode = "json" | "pty";
+
+/** Helper: map TabId to its badge-count key. */
+export function tabBadgeKey(tab: TabId): keyof TabBadgeCounts {
+  switch (tab) {
+    case TabId.Structured:
+      return "structured";
+    case TabId.Terminal:
+      return "terminal";
+    case TabId.Cargo:
+      return "cargo";
+  }
+}
 
 // ─── Tab Store Options ─────────────────────────────────────────
 
