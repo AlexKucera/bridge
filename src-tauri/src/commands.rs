@@ -8,7 +8,7 @@ use crate::config::{self, BridgeConfig, ConfigError, ValidationReport};
 use crate::db::Pool;
 use crate::vessel::{self, Vessel, VesselError, VesselWithGit};
 use sqlx::Sqlite;
-use tauri::{Emitter, Manager, State};
+use tauri::{Emitter, State};
 
 
 /// Add a new vessel from a filesystem path.
@@ -357,7 +357,7 @@ pub async fn session_launch(
 
                     // Emit Done/Error status for backward compat
                     let status = if outcome.is_failure() { "Error" } else { "Done" };
-                    let done = serde_json::json!({ "type": "status_changed", "sessionId": sid_str, "status": status });
+                    let _done = serde_json::json!({ "type": "status_changed", "sessionId": sid_str, "status": status });
                 }
             });
         }
@@ -478,24 +478,111 @@ pub async fn cargo_diff(vessel_path: String) -> std::result::Result<cargo::DiffR
 
 /// Stage all changes and commit with the given message.
 #[tauri::command]
-pub async fn cargo_commit(vessel_path: String, message: String) -> std::result::Result<cargo::CommitResult, String> {
+pub async fn cargo_commit(
+    pool: State<'_, Pool<Sqlite>>,
+    vessel_path: String,
+    message: String,
+) -> std::result::Result<cargo::CommitResult, String> {
     match cargo::cargo_commit(std::path::Path::new(&vessel_path), &message) {
-        Ok(r) => Ok(r),
+        Ok(result) => {
+            // Auto-emit Ship event for commit
+            let vid = resolve_vessel_id_for_path(&pool, &vessel_path).await;
+            let _ = crate::log::log_event(
+                &pool, vid, "Ship",
+                &format!("Committed {}", &result.hash[..7.min(result.hash.len())]),
+                Some(serde_json::json!({"hash": result.hash})),
+            ).await;
+            Ok(result)
+        }
         Err(e) => Err(e.to_string()),
     }
 }
 
 /// Push commits to remote.
 #[tauri::command]
-pub async fn cargo_push(vessel_path: String) -> std::result::Result<cargo::PushResult, String> {
+pub async fn cargo_push(
+    pool: State<'_, Pool<Sqlite>>,
+    vessel_path: String,
+) -> std::result::Result<cargo::PushResult, String> {
     match cargo::cargo_push(std::path::Path::new(&vessel_path)) {
-        Ok(r) => Ok(r),
+        Ok(result) => {
+            // Auto-emit Ship event for push
+            let vid = resolve_vessel_id_for_path(&pool, &vessel_path).await;
+            let _ = crate::log::log_event(
+                &pool, vid, "Ship",
+                "Pushed to remote",
+                Some(serde_json::json!({"success": result.success})),
+            ).await;
+            Ok(result)
+        }
         Err(e) => Err(e.to_string()),
     }
+}
+
+/// Helper: resolve vessel_id from a repository path.
+async fn resolve_vessel_id_for_path(pool: &Pool<Sqlite>, path: &str) -> Option<i64> {
+    sqlx::query_scalar("SELECT id FROM vessels WHERE path = ?")
+        .bind(path)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten()
+        .flatten()
 }
 
 /// Generate a conventional commit message from session context.
 #[tauri::command]
 pub async fn cargo_generate_message(context: SessionContext) -> std::result::Result<String, String> {
     Ok(cargo::generate_commit_message(&context))
+}
+
+// -- Log (Captain's Log) Commands --
+
+use crate::log::{self, LogEntry, LogQueryFilter};
+
+/// Insert a new log event into the Captain's Log.
+#[tauri::command]
+pub async fn log_event(
+    pool: State<'_, Pool<Sqlite>>,
+    vessel_id: Option<i64>,
+    event_type: String,
+    message: String,
+    metadata: Option<serde_json::Value>,
+) -> std::result::Result<LogEntry, String> {
+    log::log_event(&pool, vessel_id, &event_type, &message, metadata)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Query log events with optional filters.
+#[tauri::command]
+pub async fn query_logs(
+    pool: State<'_, Pool<Sqlite>>,
+    filter: LogQueryFilter,
+) -> std::result::Result<Vec<LogEntry>, String> {
+    log::query_logs(&pool, filter)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Pin a log entry.
+#[tauri::command]
+pub async fn pin_log_entry(
+    pool: State<'_, Pool<Sqlite>>,
+    entry_id: i64,
+) -> std::result::Result<(), String> {
+    log::pin_log_entry(&pool, entry_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Unpin a log entry.
+#[tauri::command]
+pub async fn unpin_log_entry(
+    pool: State<'_, Pool<Sqlite>>,
+    entry_id: i64,
+) -> std::result::Result<(), String> {
+    log::unpin_log_entry(&pool, entry_id)
+        .await
+        .map_err(|e| e.to_string())
 }

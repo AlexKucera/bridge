@@ -9,6 +9,7 @@ pub mod pty_output;
 
 #[cfg(test)]
 mod pty_output_tests;
+#[cfg(test)]
 mod pty_integration_tests;
 
 use serde::{Deserialize, Serialize};
@@ -193,7 +194,7 @@ pub fn build_launch_command(
     cfg: &config::BridgeConfig,
     overrides: &config::LaunchOverrides,
     session_dir: &str,
-    mode: &SessionMode,
+    _mode: &SessionMode,
     prompt: &str,
 ) -> Vec<String> {
     let mut cmd = vec![];
@@ -429,6 +430,15 @@ pub async fn launch(
     // Update status to Idle (waiting for first event)
     update_session_status(pool, session.id, "Idle").await?;
 
+    // Auto-emit log event for session launch
+    let _ = crate::log::log_event(
+        pool,
+        vessel_id,
+        "Run",
+        &format!("Session started{}", mode.as_str()),
+        Some(serde_json::json!({"session_id": session.id, "mode": mode.as_str()})),
+    ).await;
+
     Ok(RunningSession {
         session_id: session.id,
         meta: SessionMeta {
@@ -648,6 +658,31 @@ pub async fn finalize_session(
         .bind(session_id)
         .execute(pool)
         .await?;
+
+    // Auto-emit log event for session finalization
+    let (event_type, msg) = match outcome {
+        ExitOutcome::Success => (
+            "Run",
+            format!("Session completed ({}ms, {} tokens)", duration_ms, tokens_used),
+        ),
+        other => (
+            "Error",
+            format!("Session failed: {}", other.description()),
+        ),
+    };
+    // Get vessel_id from the session
+    let vid: Option<i64> = sqlx::query_scalar("SELECT vessel_id FROM sessions WHERE id = ?")
+        .bind(session_id)
+        .fetch_optional(pool)
+        .await?
+        .flatten();
+    let _ = crate::log::log_event(
+        pool,
+        vid,
+        event_type,
+        &msg,
+        Some(serde_json::json!({"session_id": session_id})),
+    ).await;
 
     Ok(SessionFinalizeResult {
         session_id,

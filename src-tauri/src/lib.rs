@@ -5,6 +5,7 @@ mod config;
 mod db;
 mod vessel;
 mod cargo;
+mod log;
 mod pi_session;
 pub mod events;
 
@@ -15,6 +16,7 @@ use commands::{
   session_launch, session_stop, session_retry, session_list, session_get, session_finalize,
   pty_write, pty_resize,
   cargo_status, cargo_diff, cargo_commit, cargo_push, cargo_generate_message,
+  log_event, query_logs, pin_log_entry, unpin_log_entry,
 };
 
 use crate::pi_session::SessionRegistry;
@@ -34,7 +36,7 @@ pub fn run() {
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
-            .level(log::LevelFilter::Info)
+            .level(::log::LevelFilter::Info)
             .build(),
         )?;
       }
@@ -88,6 +90,7 @@ pub fn run() {
       cargo_commit,
       cargo_push,
       cargo_generate_message,
+      log_event, query_logs, pin_log_entry, unpin_log_entry,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

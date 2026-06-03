@@ -12,7 +12,7 @@
 //!                                                    Error          Stopped
 //! ```
 
-use crate::pi_event::{PiJsonEvent, PiMessage, PiContentBlock, AssistantMessageEvent, ParsedToolCall, ToolResult, ToolContentBlock};
+use crate::pi_event::{PiJsonEvent, PiMessage, PiContentBlock, AssistantMessageEvent, ToolResult, ToolContentBlock, ParsedToolCall};
 use serde::{Deserialize, Serialize};
 
 // ─── View Model Types ─────────────────────────────────────
@@ -313,6 +313,7 @@ where F: FnMut(&mut ToolCallViewModel)
 /// Mark all incomplete tool calls as Failed and transition to Error state.
 /// Call this when Pi process dies unexpectedly (crash, OOM, kill).
 /// Returns the number of tool calls that were marked as failed.
+#[allow(dead_code)]
 pub fn crash_recovery(model: &mut ExecutionViewModel) -> usize {
     let mut failed_count = 0;
     for turn in model.turns.iter_mut() {
