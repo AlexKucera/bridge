@@ -46,3 +46,14 @@ vi.mock("@tauri-apps/api/event", () => ({
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockResolvedValue(undefined),
 }));
+
+// Mock @solidjs/router hooks (used by FleetDashboard + VesselDetailScreen)
+vi.mock("@solidjs/router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@solidjs/router")>();
+  return {
+    ...actual,
+    useNavigate: () => () => {},
+    useParams: () => ({ id: "1" }),
+    useLocation: () => ({ pathname: "/fleet" }),
+  };
+});

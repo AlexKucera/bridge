@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file. The format 
 
 ### feat
 
+- **vessel:** wire vessel click → detail → launch flow (post-Issue #11):
+
+  - **VesselDetailScreen** full rewrite: loads vessel data via `vessel_get` command, shows info card with Launch button, integrates LaunchDialog for mode/prompt/template selection, creates TabStore+PtyStore+PiExecutionStore on launch, renders SessionViewContainer with terminal tabs post-launch
+
+  - **LaunchDialog** fix: added missing `createSignal`, `createEffect`, `Show`, `invoke` imports that caused `ReferenceError: Can't find variable: createSignal` on navigation to `/vessel/:id`
+
+  - **FleetDashboard** navigation wiring: `handleVesselClick` → `navigate(/vessel/:id)` connected to VesselCard onClick
+
+  - **Test fixes**: added `useLocation` mock to test-setup.ts; fixed orphaned expect in router.test.tsx
+
 - **terminal:** add Comms Deck PTY terminal with xterm.js integration, tab switching, scan-line overlay animation, and log-line color classifier (Issue #11):
 
   - **Rust PTY backend** (src-tauri/src/pi_session/pty.rs + pty_output.rs): PtySession wrapping portable-pty with spawn/write/read/resize; PtyOutputPayload/PtyExitPayload with base64 encoding for binary-safe JSON transport; PtyOutputLoop reading stdout via blocking thread → mpsc channel; spawn_output_reader() for non-blocking output capture; run_output_loop() read-until-EOF with exit detection; 9 integration tests exercising full pipeline (echo, session ID propagation, timestamps, JSON serialization, base64 round-trip, multi-line, exit ordering)

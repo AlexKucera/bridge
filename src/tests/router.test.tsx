@@ -44,6 +44,9 @@ describe("Router", () => {
     const { findByText } = render(() => <BridgeRoutes />, { location: "/fleet" });
     expect(await findByText(/Monitor all vessels/i)).toBeInTheDocument();
   });
+
+  it("renders FleetChartsScreen stub at /charts", async () => {
+    const { findByText } = render(() => <BridgeRoutes />, { location: "/charts" });
     expect(await findByText(/Analytics and metrics coming/i)).toBeInTheDocument();
   });
 

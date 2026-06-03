@@ -43,7 +43,9 @@ export function VesselCard(props: VesselCardProps) {
   const dirty = props.dirty ?? false;
   const selected = props.selected ?? false;
 
-  const handleClick = () => props.onClick?.(props.vessel);
+  const handleClick = () => {
+    props.onClick?.(props.vessel);
+  };
   const handleContextMenu = (e: MouseEvent) => {
     e.preventDefault();
     props.onContextMenu?.(props.vessel);

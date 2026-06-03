@@ -50,6 +50,7 @@ Session logs are written to `docs/devlog/` after each completed task, issue fix,
 
 | Date | Type | File | Summary |
 |------|------|------|---------|
+| 2026-06-02 | generic | [20260602-vessel-click-launch-flow-wiring_log.md](docs/devlog/20260602-vessel-click-launch-flow-wiring_log.md) | **Vessel Click → Launch Flow Fixed:** LaunchDialog missing imports root cause + VesselDetailScreen full rewrite + test fixes. 540/558 frontend pass, tsc clean |
 | 2026-06-02 | slice | [20260602-slice-9d-comms-deck-integration-ac7-classifier-issue11_log.md](docs/devlog/20260602-slice-9d-comms-deck-integration-ac7-classifier-issue11_log.md) | **Issue #11 Complete:** mod.rs structural fix + session_launch restore + 9 integration tests + LogLineClassifier (42 tests) for AC#7. 139/139 Rust · 539/550 frontend · **11/11 AC** |
 | 2026-06-02 | slice | [20260602-slice-9c-comms-deck-tab-switching-issue11_log.md](docs/devlog/20260602-slice-9c-comms-deck-tab-switching-issue11_log.md) | **Tab Switching:** TabBar + TabStore + SessionViewContainer + badge counts + always-mounted state preservation. 33 new tests, 497/508 frontend pass
 | 2026-06-02 | slice | [20260602-slice-9b-comms-deck-frontend-issue11_log.md](docs/devlog/20260602-slice-9b-comms-deck-frontend-issue11_log.md) | **PTY Frontend:** xterm.js + PtyStore + CommsDeckPanel + ScanLineOverlay + scan-line CSS + event wiring. 27 new tests, 464/475 frontend pass |
