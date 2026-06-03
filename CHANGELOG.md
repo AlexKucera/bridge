@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file. The format 
 
 ### feat
 
+- **log:** add Captain's Log and Activity Feed (Issue #14):
+
+  - **Rust backend** (src-tauri/src/log/mod.rs): LogEventType enum (Run/Ship/Warn/Error/Crew), LogEntry with vessel_name resolution via COALESCE, LogQueryFilter with 6 dimensions, log_event() with type validation + JSON metadata, query_logs() with dynamic SQL builder (LEFT JOIN vessels, ORDER BY pinned DESC, created_at DESC), pin_log_entry()/unpin_log_entry() with NotFound safety; 16 Rust tests
+
+  - **Tauri commands** (commands.rs + lib.rs): log_event, query_logs, pin_log_entry, unpin_log_entry -- all returning Result<T, String> for Tauri 2 compatibility
+
+  - **Session lifecycle auto-emission** (pi_session/mod.rs, commands.rs): session_launch emits Run event, finalize_session emits Run/Error with duration/tokens, cargo_commit emits Ship with hash, cargo_push emits Ship with success status; resolve_vessel_id_for_path() helper
+
+  - **Frontend types** (lib/log-types.ts): LogEntry, LogQueryFilter, LogEventType interfaces; EVENT_TYPE_COLORS map (blue/green/amber/red/purple); EVENT_TYPE_ICONS map
+
+  - **Log Store** (store/log-store.ts): SolidJS reactive store -- fetchLogs, setFilter, resetFilter, pinEntry, unpinEntry, refresh, derived pinnedCount; 8 tests
+
+  - **UI components**: LogFilters (time range pills 1h/24h/7d/30d with glow-state active styling, event type multi-select pills, pinned toggle with counter badge), LogEventRow (HH:MM time, color-coded icon, message+vessel link, pin/copy/open/expand actions), LogTimeline (day-grouped with sticky Today/Yesterday/weekday headers, empty state), LogSearch (cmd+F shortcut, 200ms debounce, clear button), ActivityFeedPanel/FeedItem (280px panel, real-time Tauri event subscription, truncated ~80char messages, relative timestamps, View full log link); 11 component tests
+
+  - **CaptainsLogScreen** full rewrite: wires LogSearch + LogFilters + LogTimeline with OverlayLayout nav; filter handlers for time range, type toggle (multi-select AND), pinned toggle, search with debounce; pin/copy/vessel-navigation callbacks
+
+  - **CSS** (bridge.css): ~350 lines -- .log-pill.active glow-state with per-type box-shadow colors, .log-event-row grid (48px|28px|1fr|auto), .log-day-header sticky positioning, .activity-feed-panel fixed 280px width, .feed-item compact layout, empty state illustrations
+
+  - **Fix**: UnlistenFn is a type-only export in Tauri v2 -- split into import type in log-store.ts and ActivityFeedPanel.tsx to fix blank-window SyntaxError
+
 - **session:** add post-session finalization pipeline and result card (Issue #13):
 
   - **Rust backend** (src-tauri/src/pi_session/mod.rs): ExitOutcome enum (Success/ErrorCode/Signal with Unix signal handling), SessionFinalizeResult struct, finalize_session() async function (DB update + duration computation), PreflightHardeningError enum + preflight_hardening() (binary/vessel-path/git-repo/writability checks); 12 Rust tests
